@@ -1,6 +1,7 @@
 .gradle
 .DS_Store
 /build
+build/
 appengine-generated/
 
 # Built application files
