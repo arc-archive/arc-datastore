@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<datastore-index kind="ArcSession" ancestor="false" autoGenerate="true">
+    <property name="appId" direction="asc"/>
+    <property name="date" direction="asc"/>
+</datastore-index>
