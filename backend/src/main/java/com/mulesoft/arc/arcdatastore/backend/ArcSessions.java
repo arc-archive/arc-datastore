@@ -37,6 +37,7 @@ import java.util.List;
 public class ArcSessions {
 
     // http://localhost:8080/_ah/api/arcSessions/v1/record/aaa/${now}
+    // https://chromerestclient.appspot.com/_ah/api/arcSessions/v1/record/aaa/${now}
 
     @ApiMethod(name = "record", httpMethod = ApiMethod.HttpMethod.POST )
     public InsertResult record(@Named("ai") String appId, @Named("t") Long time) {
@@ -69,6 +70,7 @@ public class ArcSessions {
     }
 
     //http://localhost:8080/_ah/api/arcSessions/v1/query?startDate=2016-07-01T00%3A00%3A00.000%2B01%3A00&endDate=2016-07-30T23%3A59%3A59.000%2B01%3A00
+    // https://chromerestclient.appspot.com/_ah/api/arcSessions/v1/query?startDate=2016-07-01T00%3A00%3A00.000%2B01%3A00&endDate=2016-07-30T23%3A59%3A59.000%2B01%3A00
 
     @ApiMethod(name = "query", httpMethod = ApiMethod.HttpMethod.GET, path = "query" )
     public QueryResult query(@Named("startDate") @Nullable Date startDate, @Named("endDate") @Nullable Date endDate) {
