@@ -11,10 +11,10 @@ import com.google.api.server.spi.config.ApiMethod;
 import com.google.api.server.spi.config.ApiNamespace;
 import com.google.api.server.spi.config.Named;
 import com.google.api.server.spi.config.Nullable;
+import com.google.api.server.spi.response.BadRequestException;
+import com.googlecode.objectify.Objectify;
 import com.googlecode.objectify.cmd.Query;
 import com.googlecode.objectify.cmd.QueryKeys;
-
-import com.googlecode.objectify.Objectify;
 import com.mulesoft.arc.arcdatastore.backend.models.ArcSession;
 import com.mulesoft.arc.arcdatastore.backend.models.InsertResult;
 import com.mulesoft.arc.arcdatastore.backend.models.QueryResult;
@@ -25,22 +25,39 @@ import java.util.List;
 
 /** An endpoint class we are exposing */
 @Api(
-  name = "arcSessions",
+  name = "analytics",
   version = "v1",
-  description = "An API to manage ARC sessions.",
+  description = "An API to manage ARC analytics.",
   namespace = @ApiNamespace(
     ownerDomain = "backend.arcdatastore.arc.mulesoft.com",
     ownerName = "backend.arcdatastore.arc.mulesoft.com",
     packagePath=""
   )
 )
-public class ArcSessions {
+public class Analytics {
 
-    // http://localhost:8080/_ah/api/arcSessions/v1/record/aaa/${now}
-    // https://chromerestclient.appspot.com/_ah/api/arcSessions/v1/record/aaa/${now}
+    // http://localhost:8080/_ah/api/analytics/v1/record/?ai=aaa&t=${now}
+    // https://chromerestclient.appspot.com/_ah/api/analytics/v1/record/?ai=aaa&t=${now}
 
     @ApiMethod(name = "record", httpMethod = ApiMethod.HttpMethod.POST )
-    public InsertResult record(@Named("ai") String appId, @Named("t") Long time) {
+    public InsertResult record(@Named("ai") @Nullable String appId, @Named("t") @Nullable Long time) throws Exception {
+
+        String errorMessage = null;
+        if (appId == null) {
+            errorMessage = "'ai' (appId) parameter is missing but it's required. ";
+        }
+        if (time == null) {
+            String err = "'t' (time) parameter is missing but it's required. ";
+            if (errorMessage == null) {
+                errorMessage = err;
+            } else {
+                errorMessage += err;
+            }
+        }
+        if (errorMessage != null) {
+            throw new BadRequestException(errorMessage);
+        }
+
         Objectify ofy = OfyService.ofy();
 
         long past = time - 1800000; // 30 * 60 * 1000; - 30 minutes
@@ -51,29 +68,43 @@ public class ArcSessions {
 
         ArcSession last = ofy.load().type(ArcSession.class)
             .filter("appId", appId)
-            .filter("date >=", datePast)
+            .filter("lastUpdate >=", datePast)
             .first().now();
 
         // Still the same session
         if (last != null) {
             r.continueSession = true;
+            last.lastUpdate = new Date(time);
+            ofy.save().entity(last).now();
             return r;
         }
 
         ArcSession rec = new ArcSession();
         rec.appId = appId;
         rec.date = new Date(time);
+        rec.lastUpdate = rec.date;
         ofy.save().entity(rec).now();
 
         r.continueSession = false;
         return r;
     }
 
-    //http://localhost:8080/_ah/api/arcSessions/v1/query?startDate=2016-07-01T00%3A00%3A00.000%2B01%3A00&endDate=2016-07-30T23%3A59%3A59.000%2B01%3A00
-    // https://chromerestclient.appspot.com/_ah/api/arcSessions/v1/query?startDate=2016-07-01T00%3A00%3A00.000%2B01%3A00&endDate=2016-07-30T23%3A59%3A59.000%2B01%3A00
+    // http://localhost:8080/_ah/api/analytics/v1/query?sd=2016-07-01T00%3A00%3A00.000%2B01%3A00&ed=2016-07-30T23%3A59%3A59.000%2B01%3A00
+    // https://chromerestclient.appspot.com/_ah/api/analytics/v1/query?sd=2016-07-01T00%3A00%3A00.000%2B01%3A00&ed=2016-07-30T23%3A59%3A59.000%2B01%3A00
 
     @ApiMethod(name = "query", httpMethod = ApiMethod.HttpMethod.GET, path = "query" )
-    public QueryResult query(@Named("startDate") @Nullable Date startDate, @Named("endDate") @Nullable Date endDate) {
+    public QueryResult query(@Named("sd") @Nullable Date startDate, @Named("ed") @Nullable Date endDate) throws Exception {
+
+        String errorMessage = "";
+        if (startDate == null) {
+            errorMessage += "'sd' (startDate) parameter is missing but it's required. ";
+        }
+        if (endDate == null) {
+            errorMessage += "'ed' (endDate) parameter is missing but it's required. ";
+        }
+        if (errorMessage != "") {
+            throw new BadRequestException(errorMessage);
+        }
 
         Objectify ofy = OfyService.ofy();
         Query<ArcSession> q = ofy.load().type(ArcSession.class).filter("date >=", startDate);

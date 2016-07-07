@@ -6,9 +6,7 @@ import com.googlecode.objectify.annotation.Entity;
 import com.googlecode.objectify.annotation.Id;
 import com.googlecode.objectify.annotation.Index;
 
-import java.util.ArrayList;
 import java.util.Date;
-import java.util.List;
 
 /**
  * A model class representing single session.
@@ -19,10 +17,24 @@ public class ArcSession {
     @ApiResourceProperty(ignored = AnnotationBoolean.TRUE)
     @Id Long id;
 
+    /**
+     * Application generated ID
+     * The app ID is synchronized between user machines so it is accurate.
+     */
     @ApiResourceProperty
     @Index public String appId;
 
-    @Index
+    /**
+     * The date of the event.
+     */
     @ApiResourceProperty(ignored = AnnotationBoolean.TRUE)
-    public Date date;
+    @Index public Date date;
+
+    /**
+     * Last update time.
+     * Then the user hit again then this metric will be update. It is used to determine
+     * if the hit belongs to existing session.
+     */
+    @ApiResourceProperty(ignored = AnnotationBoolean.TRUE)
+    @Index public Date lastUpdate;
 }

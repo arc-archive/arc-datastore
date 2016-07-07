@@ -1,8 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
-<datastore-indexes autoGenerate="true">
-    <datastore-index kind="ArcSession" ancestor="false">
-        <property name="__key__" direction="asc"/>
+<datastore-indexes autoGenerate="false">
+    <datastore-index kind="ArcSession" ancestor="false" source="manual">
         <property name="appId" direction="asc"/>
+        <property name="lastUpdate" direction="asc"/>
+    </datastore-index>
+    <datastore-index kind="ArcSession" ancestor="false" source="manual">
+        <property name="__key__" direction="asc"/>
         <property name="date" direction="asc"/>
     </datastore-index>
 </datastore-indexes>
