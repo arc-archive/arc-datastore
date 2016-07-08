@@ -122,28 +122,28 @@ public class AnalyticsServlet extends HttpServlet {
 
     private void handleRecord(HttpServletRequest req, HttpServletResponse resp) throws IOException {
         String appId = req.getParameter("ai");
-        String t = req.getParameter("t");
+//        String t = req.getParameter("t");
         String tz = req.getParameter("tz");
         if (appId == null) {
             reportError(resp, 400, "'ai' (appId) parameter is missing but it's required");
             return;
         }
-        if (t == null) {
-            reportError(resp, 400, "'t' (time) parameter is missing but it's required.");
-            return;
-        }
+//        if (t == null) {
+//            reportError(resp, 400, "'t' (time) parameter is missing but it's required.");
+//            return;
+//        }
         if (tz == null) {
             reportError(resp, 400, "'tz' (timeZoneOffset) parameter is missing but it's required.");
             return;
         }
 
-        Long time;
-        try {
-            time = Long.parseLong(t);
-        } catch (Exception e) {
-            reportError(resp, 400, "'t' (time) parameter is invalid: " + t);
-            return;
-        }
+//        Long time;
+//        try {
+//            time = Long.parseLong(t);
+//        } catch (Exception e) {
+//            reportError(resp, 400, "'t' (time) parameter is invalid: " + t);
+//            return;
+//        }
         Integer timeZoneOffset;
         try {
             timeZoneOffset = Integer.parseInt(tz);
@@ -151,6 +151,10 @@ public class AnalyticsServlet extends HttpServlet {
             reportError(resp, 400, "'tz' (time) timeZoneOffset is invalid: " + tz);
             return;
         }
+
+        // Do not accept client timestamp since it can't be reliable
+        Date d = new Date();
+        Long time = d.getTime();
 
         // End params parsing and check.
 
