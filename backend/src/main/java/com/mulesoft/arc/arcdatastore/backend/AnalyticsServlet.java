@@ -78,7 +78,7 @@ public class AnalyticsServlet extends HttpServlet {
             return;
         }
         try {
-            endDate = df.parse(sd);
+            endDate = df.parse(ed);
         } catch (Exception e) {
             System.err.println(e.getMessage());
             reportError(resp, 400, "'ed' (endDate) parameter is invalid: " + ed);
