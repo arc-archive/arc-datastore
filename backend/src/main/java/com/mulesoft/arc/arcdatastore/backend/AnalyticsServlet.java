@@ -33,6 +33,8 @@ import javax.servlet.http.HttpServletResponse;
 public class AnalyticsServlet extends HttpServlet {
 
     private static final Logger log = Logger.getLogger(AnalyticsServlet.class.getName());
+    // Session timeout in milliseconds - 30 minutes.
+    private static final int SESSION_TIMEOUT = 1800000; // 30 * 60 * 1000; - 30 minutes
 
     @Override
     public void doGet(HttpServletRequest req, HttpServletResponse resp) throws IOException {
@@ -56,6 +58,15 @@ public class AnalyticsServlet extends HttpServlet {
         }
     }
 
+    /**
+     * Prepare data for analysis.
+     * This request require sd (start date) and ed (end date) parameters.
+     * As a result it will return an JSON object with number of users and sessions.
+     *
+     * @param req
+     * @param resp
+     * @throws IOException
+     */
     private void handleQuery(HttpServletRequest req, HttpServletResponse resp) throws IOException {
         String sd = req.getParameter("sd");
         String ed = req.getParameter("ed");
@@ -120,6 +131,13 @@ public class AnalyticsServlet extends HttpServlet {
         writeSuccess(resp, gson.toJson(result));
     }
 
+    /**
+     * Record a session.
+     *
+     * @param req
+     * @param resp
+     * @throws IOException
+     */
     private void handleRecord(HttpServletRequest req, HttpServletResponse resp) throws IOException {
         String appId = req.getParameter("ai");
 //        String t = req.getParameter("t");
