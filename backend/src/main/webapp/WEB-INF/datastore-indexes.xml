@@ -12,10 +12,4 @@
         <property name="date" direction="asc"/>
         <property name="appId" direction="asc"/>
     </datastore-index>
-    <datastore-index kind="DailyAnalytics" ancestor="false" source="manual">
-        <property name="__key__" direction="asc"/>
-    </datastore-index>
-    <datastore-index kind="WeeklyAnalytics" ancestor="false" source="manual">
-        <property name="__key__" direction="asc"/>
-    </datastore-index>
 </datastore-indexes>
