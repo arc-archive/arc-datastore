@@ -1,21 +1,11 @@
 package com.mulesoft.arc.arcdatastore.backend;
 
 import com.google.gson.Gson;
-import com.googlecode.objectify.Objectify;
-import com.googlecode.objectify.cmd.Query;
-import com.googlecode.objectify.cmd.QueryKeys;
-import com.mulesoft.arc.arcdatastore.backend.models.ArcSession;
 import com.mulesoft.arc.arcdatastore.backend.models.ErrorResponse;
 import com.mulesoft.arc.arcdatastore.backend.models.InsertResult;
 import com.mulesoft.arc.arcdatastore.backend.models.QueryResult;
 
 import java.io.IOException;
-import java.text.DateFormat;
-import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.List;
-import java.util.Locale;
 import java.util.logging.Logger;
 
 import javax.servlet.ServletException;
@@ -33,6 +23,7 @@ import javax.servlet.http.HttpServletResponse;
 public class AnalyticsServlet extends HttpServlet {
 
     private static final Logger log = Logger.getLogger(AnalyticsServlet.class.getName());
+    AnalyticsDatabase db;
     // Session timeout in milliseconds - 30 minutes.
     private static final int SESSION_TIMEOUT = 1800000; // 30 * 60 * 1000; - 30 minutes
 
@@ -41,6 +32,8 @@ public class AnalyticsServlet extends HttpServlet {
         String path = req.getPathInfo();
         if ("/query".equals(path)) {
             handleQuery(req, resp);
+        } else if ("/random".equals(path)) {
+            handleRandomData(req, resp);
         } else {
             reportError(resp, HttpServletResponse.SC_NOT_FOUND, "Unknown path: " + path);
             log.warning("Unknown path for doGET: " + path);
@@ -78,55 +71,15 @@ public class AnalyticsServlet extends HttpServlet {
             reportError(resp, 400, "'ed' (endDate) parameter is required");
             return;
         }
-        DateFormat df = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSXXX", Locale.UK);
-        Date startDate;
-        Date endDate;
+
+        AnalyticsDatabase db = getDatabase(req);
+        QueryResult result;
         try {
-            startDate = df.parse(sd);
+            result = db.queryAnalytics(sd, ed);
         } catch (Exception e) {
-            System.err.println(e.getMessage());
-            reportError(resp, 400, "'sd' (startDate) parameter is invalid: " + sd);
+            reportError(resp, 400, e.getMessage());
             return;
         }
-        try {
-            endDate = df.parse(ed);
-        } catch (Exception e) {
-            System.err.println(e.getMessage());
-            reportError(resp, 400, "'ed' (endDate) parameter is invalid: " + ed);
-            return;
-        }
-
-        // End params parsing and check.
-
-        Objectify ofy = OfyService.ofy();
-        Query<ArcSession> q = ofy.load().type(ArcSession.class).filter("date >=", startDate);
-        QueryKeys<ArcSession> keys = q.keys();
-
-        q = ofy.load().type(ArcSession.class).filter("date <=", endDate);
-        if (keys.list().size() > 0) {
-            q = q.filterKey("in", keys);
-        }
-        List<ArcSession> list = q.list();
-
-        long users = 0;
-        long sessions = 0;
-        ArrayList<String> uids = new ArrayList<>();
-
-        for (ArcSession s : list) {
-            String uid = s.appId;
-            if (!uids.contains(uid)) {
-                users++;
-                uids.add(uid);
-            }
-            sessions++;
-        }
-
-        QueryResult result = new QueryResult();
-        result.sessions = sessions;
-        result.users = users;
-        result.startDate = startDate;
-        result.endDate = endDate;
-
         Gson gson = new Gson();
         writeSuccess(resp, gson.toJson(result));
     }
@@ -140,28 +93,23 @@ public class AnalyticsServlet extends HttpServlet {
      */
     private void handleRecord(HttpServletRequest req, HttpServletResponse resp) throws IOException {
         String appId = req.getParameter("ai");
-//        String t = req.getParameter("t");
-        String tz = req.getParameter("tz");
         if (appId == null) {
             reportError(resp, 400, "'ai' (appId) parameter is missing but it's required");
             return;
         }
+//        String t = req.getParameter("t");
 //        if (t == null) {
 //            reportError(resp, 400, "'t' (time) parameter is missing but it's required.");
 //            return;
 //        }
+
+        String tz = req.getParameter("tz");
         if (tz == null) {
             reportError(resp, 400, "'tz' (timeZoneOffset) parameter is missing but it's required.");
             return;
         }
 
-//        Long time;
-//        try {
-//            time = Long.parseLong(t);
-//        } catch (Exception e) {
-//            reportError(resp, 400, "'t' (time) parameter is invalid: " + t);
-//            return;
-//        }
+
         Integer timeZoneOffset;
         try {
             timeZoneOffset = Integer.parseInt(tz);
@@ -170,50 +118,25 @@ public class AnalyticsServlet extends HttpServlet {
             return;
         }
 
-        // Do not accept client timestamp since it can't be reliable
-        Date d = new Date();
-        Long time = d.getTime();
-
-        // End params parsing and check.
-
-        time += timeZoneOffset; // Move to user's timezone.
-        long past = time - 1800000; // 30 * 60 * 1000; - 30 minutes
-        Date datePast = new Date(past);
-
-        InsertResult r = new InsertResult();
-        r.success = true;
-
-        Objectify ofy = OfyService.ofy();
-
-        ArcSession last = ofy.load().type(ArcSession.class)
-                .filter("appId", appId)
-                .filter("lastUpdate >=", datePast)
-                .first().now();
-
-        Gson gson = new Gson();
-
-        // Still the same session
-        if (last != null) {
-            r.continueSession = true;
-            last.lastUpdate = new Date(time);
-            ofy.save().entity(last).now();
-            writeSuccess(resp, gson.toJson(r));
+        AnalyticsDatabase db = getDatabase(req);
+        InsertResult result;
+        try {
+            result = db.recordSession(appId, timeZoneOffset, null);
+        } catch (Exception e) {
+            reportError(resp, 400, e.getMessage());
             return;
         }
+        Gson gson = new Gson();
+        writeSuccess(resp, gson.toJson(result));
+    }
 
-        ArcSession rec = new ArcSession();
-        rec.appId = appId;
-        rec.date = new Date(time);
-        rec.lastUpdate = rec.date;
-        ofy.save().entity(rec).now();
-
-        r.continueSession = false;
-        writeSuccess(resp, gson.toJson(r));
+    private void handleRandomData(HttpServletRequest req, HttpServletResponse resp) throws IOException {
+//        AnalyticsDatabase db = getDatabase(req);
+//        db.generateRandomData();
+        resp.setStatus(204);
     }
 
     private void reportError(HttpServletResponse resp, int statusCode, String message) throws IOException {
-//        System.out.println("UUUUPPPPSSSSS: " + message);
-
         ErrorResponse r = new ErrorResponse();
         r.code = statusCode;
         r.message = message;
@@ -239,5 +162,16 @@ public class AnalyticsServlet extends HttpServlet {
         System.out.println("Request URI " + ru);
         System.out.println("Context path " + cp);
         System.out.println("Server name " + sn);
+    }
+
+    private AnalyticsDatabase getDatabase(HttpServletRequest req) {
+        if (req == null) {
+            return new ObjectifyAnalytics();
+        }
+        String connection = req.getParameter("connection");
+        if (connection != null && connection.equals("raw")) {
+            return new DatastoreAnalyticsAccess();
+        }
+        return new ObjectifyAnalytics();
     }
 }

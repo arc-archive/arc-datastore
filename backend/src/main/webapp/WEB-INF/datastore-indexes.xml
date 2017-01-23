@@ -4,8 +4,12 @@
         <property name="appId" direction="asc"/>
         <property name="lastUpdate" direction="asc"/>
     </datastore-index>
+    <!--<datastore-index kind="ArcSession" ancestor="false" source="manual">-->
+        <!--<property name="__key__" direction="asc"/>-->
+        <!--<property name="date" direction="asc"/>-->
+    <!--</datastore-index>-->
     <datastore-index kind="ArcSession" ancestor="false" source="manual">
-        <property name="__key__" direction="asc"/>
         <property name="date" direction="asc"/>
+        <property name="appId" direction="asc"/>
     </datastore-index>
 </datastore-indexes>
