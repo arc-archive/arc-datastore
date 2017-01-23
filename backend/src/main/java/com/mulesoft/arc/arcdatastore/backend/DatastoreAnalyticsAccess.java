@@ -70,15 +70,19 @@ public class DatastoreAnalyticsAccess implements AnalyticsDatabase {
             throw new Error("The end date parameter is invalid: " + toDate);
         }
 
-        Filter downFilter = new FilterPredicate("date", FilterOperator.GREATER_THAN_OR_EQUAL, startDate);
-        Filter upFilter = new FilterPredicate("date", FilterOperator.LESS_THAN_OR_EQUAL, endDate);
+        return queryAnalytics(startDate, endDate);
+    }
+
+    public QueryResult queryAnalytics(Date fromDate, Date toDate) {
+        Filter downFilter = new FilterPredicate("date", FilterOperator.GREATER_THAN_OR_EQUAL, fromDate);
+        Filter upFilter = new FilterPredicate("date", FilterOperator.LESS_THAN_OR_EQUAL, toDate);
         Filter queryFilter = CompositeFilterOperator.and(downFilter, upFilter);
 
         Query q = new Query("ArcSession")
                 .setFilter(queryFilter)
                 .addProjection(new PropertyProjection("appId", String.class));
         List<Entity> list = datastore.prepare(q)
-            .asList(FetchOptions.Builder.withDefaults());
+                .asList(FetchOptions.Builder.withDefaults());
 
         ArrayList<String> uids = new ArrayList<>();
         long users = 0;
@@ -96,8 +100,8 @@ public class DatastoreAnalyticsAccess implements AnalyticsDatabase {
         QueryResult result = new QueryResult();
         result.sessions = sessions;
         result.users = users;
-//        result.startDate = startDate;
-//        result.endDate = endDate;
+        result.startDate = fromDate;
+        result.endDate = toDate;
         return result;
     }
 
@@ -124,14 +128,13 @@ public class DatastoreAnalyticsAccess implements AnalyticsDatabase {
         arcSession.setProperty("date", currentDate);
         arcSession.setProperty("lastUpdate", currentDate);
         datastore.put(arcSession);
-        log.info("INSERTED! :) " + arcSession.getKey().getId());
         insert.continueSession = false;
         return insert;
     }
 
     @Override
     public void generateRandomData() {
-        int size = 1000;
+        int size = 2000;
         ArrayList<Entity> list = new ArrayList<>(size);
         for (int i = 0; i < size; i++) {
             Date d = getRandomDay();
@@ -172,5 +175,134 @@ public class DatastoreAnalyticsAccess implements AnalyticsDatabase {
 
     private int randBetween(int start, int end) {
         return start + (int)Math.round(Math.random() * (end - start));
+    }
+
+    /**
+     * Analyse a single day and store data with number of sessions and users during this day.
+     *
+     * @param date A day date as a YYYY-mm-ddd
+     */
+    public void analyseDay(String date) throws Exception {
+        Date start;
+        Date end;
+        Calendar cal = Calendar.getInstance();
+        DateFormat df = new SimpleDateFormat("yyyy-MM-dd", Locale.UK);
+        if (date != null) {
+            Date d = df.parse(date);
+            cal.setTime(d);
+        } else {
+            cal.add(Calendar.DAY_OF_MONTH, -1); // Count data for yesterday.
+        }
+        cal.set(Calendar.HOUR_OF_DAY, cal.getActualMinimum(Calendar.HOUR_OF_DAY));
+        cal.set(Calendar.MINUTE, cal.getActualMinimum(Calendar.MINUTE));
+        cal.set(Calendar.SECOND, cal.getActualMinimum(Calendar.SECOND));
+        cal.set(Calendar.MILLISECOND, cal.getActualMinimum(Calendar.MILLISECOND));
+        start = cal.getTime();
+        cal.set(Calendar.HOUR_OF_DAY, cal.getActualMaximum(Calendar.HOUR_OF_DAY));
+        cal.set(Calendar.MINUTE, cal.getActualMaximum(Calendar.MINUTE));
+        cal.set(Calendar.SECOND, cal.getActualMaximum(Calendar.SECOND));
+        cal.set(Calendar.MILLISECOND, cal.getActualMaximum(Calendar.MILLISECOND));
+        end = cal.getTime();
+
+        DateFormat logFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.UK);
+        log.info("Generating daily report " + logFormat.format(start) + " - " + logFormat.format(end));
+
+        QueryResult result = queryAnalytics(start, end);
+
+        String key = df.format(start);
+        Entity info = new Entity("DailyAnalytics", key);
+        info.setProperty("sessions", result.sessions);
+        info.setProperty("users", result.users);
+        datastore.put(info);
+    }
+
+    /**
+     * Analyse a single week and store data with number of sessions and users during this week.
+     *
+     * @param date A day when the week starts as a YYYY-mm-dd. This function will search for previous
+     *             first day of week (if pointed date isn't one)
+     */
+    public void analyseWeek(String date) throws Exception {
+        Date start;
+        Date end;
+        Calendar cal = Calendar.getInstance();
+        DateFormat df = new SimpleDateFormat("yyyy-MM-dd", Locale.UK);
+        if (date != null) {
+            Date d = df.parse(date);
+            cal.setTime(d);
+        } else {
+            cal.add(Calendar.DAY_OF_MONTH, -7); // Count data for last week.
+        }
+        // set previous monday
+        int day = cal.get(Calendar.DAY_OF_WEEK);
+        int firstDayOfWeek = cal.getFirstDayOfWeek();
+        while (day != firstDayOfWeek) {
+            cal.add(Calendar.DATE, -1);
+            day = cal.get(Calendar.DAY_OF_WEEK);
+        }
+        cal.set(Calendar.HOUR_OF_DAY, cal.getActualMinimum(Calendar.HOUR_OF_DAY));
+        cal.set(Calendar.MINUTE, cal.getActualMinimum(Calendar.MINUTE));
+        cal.set(Calendar.SECOND, cal.getActualMinimum(Calendar.SECOND));
+        cal.set(Calendar.MILLISECOND, cal.getActualMinimum(Calendar.MILLISECOND));
+        start = cal.getTime();
+        cal.add(Calendar.DAY_OF_MONTH, 6);
+        cal.set(Calendar.HOUR_OF_DAY, cal.getActualMaximum(Calendar.HOUR_OF_DAY));
+        cal.set(Calendar.MINUTE, cal.getActualMaximum(Calendar.MINUTE));
+        cal.set(Calendar.SECOND, cal.getActualMaximum(Calendar.SECOND));
+        cal.set(Calendar.MILLISECOND, cal.getActualMaximum(Calendar.MILLISECOND));
+        end = cal.getTime();
+
+        DateFormat logFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.UK);
+        log.info("Generating weekly report " + logFormat.format(start) + " - " + logFormat.format(end));
+
+        QueryResult result = queryAnalytics(start, end);
+
+        String key = df.format(start);
+        Entity info = new Entity("WeeklyAnalytics", key);
+        info.setProperty("sessions", result.sessions);
+        info.setProperty("users", result.users);
+        datastore.put(info);
+    }
+
+    /**
+     * Analyse a single month and store data with number of sessions and users during this month.
+     *
+     * @param date A data as a YYYY-mm
+     */
+    public void analyseMonth(String date) throws Exception {
+        Date start;
+        Date end;
+        Calendar cal = Calendar.getInstance();
+        DateFormat df = new SimpleDateFormat("yyyy-MM");
+        if (date != null) {
+            log.info("Got date to use as a reference: " + date);
+            Date d = df.parse(date);
+            cal.setTime(d);
+        } else {
+            cal.add(Calendar.MONTH, -1); // Count data for last month.
+        }
+        cal.set(Calendar.DATE, 1);
+        cal.set(Calendar.HOUR_OF_DAY, cal.getActualMinimum(Calendar.HOUR_OF_DAY));
+        cal.set(Calendar.MINUTE, cal.getActualMinimum(Calendar.MINUTE));
+        cal.set(Calendar.SECOND, cal.getActualMinimum(Calendar.SECOND));
+        cal.set(Calendar.MILLISECOND, cal.getActualMinimum(Calendar.MILLISECOND));
+        start = cal.getTime();
+        cal.add(Calendar.DATE, cal.getActualMaximum(Calendar.DAY_OF_MONTH)-1);
+        cal.set(Calendar.HOUR_OF_DAY, cal.getActualMaximum(Calendar.HOUR_OF_DAY));
+        cal.set(Calendar.MINUTE, cal.getActualMaximum(Calendar.MINUTE));
+        cal.set(Calendar.SECOND, cal.getActualMaximum(Calendar.SECOND));
+        cal.set(Calendar.MILLISECOND, cal.getActualMaximum(Calendar.MILLISECOND));
+        end = cal.getTime();
+
+        DateFormat logFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+        log.info("Generating monthly report " + logFormat.format(start) + " - " + logFormat.format(end));
+
+        QueryResult result = queryAnalytics(start, end);
+
+        String key = df.format(start);
+        Entity info = new Entity("MonthlyAnalytics", key);
+        info.setProperty("sessions", result.sessions);
+        info.setProperty("users", result.users);
+        datastore.put(info);
     }
 }

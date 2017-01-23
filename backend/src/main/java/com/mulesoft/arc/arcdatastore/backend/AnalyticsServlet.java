@@ -34,6 +34,12 @@ public class AnalyticsServlet extends HttpServlet {
             handleQuery(req, resp);
         } else if ("/random".equals(path)) {
             handleRandomData(req, resp);
+        } else if ("/analyse-day".equals(path)) {
+            handleAnalyseDay(req, resp);
+        } else if ("/analyse-week".equals(path)) {
+            handleAnalyseWeek(req, resp);
+        } else if ("/analyse-month".equals(path)) {
+            handleAnalyseMonth(req, resp);
         } else {
             reportError(resp, HttpServletResponse.SC_NOT_FOUND, "Unknown path: " + path);
             log.warning("Unknown path for doGET: " + path);
@@ -131,8 +137,8 @@ public class AnalyticsServlet extends HttpServlet {
     }
 
     private void handleRandomData(HttpServletRequest req, HttpServletResponse resp) throws IOException {
-//        AnalyticsDatabase db = getDatabase(req);
-//        db.generateRandomData();
+        AnalyticsDatabase db = getDatabase(req);
+        db.generateRandomData();
         resp.setStatus(204);
     }
 
@@ -173,5 +179,45 @@ public class AnalyticsServlet extends HttpServlet {
             return new DatastoreAnalyticsAccess();
         }
         return new ObjectifyAnalytics();
+    }
+
+
+    private void handleAnalyseDay(HttpServletRequest req, HttpServletResponse resp) throws IOException {
+        DatastoreAnalyticsAccess db = new DatastoreAnalyticsAccess();
+        String date = req.getParameter("date");
+        try {
+            db.analyseDay(date);
+        } catch (Exception e) {
+            log.severe("Daily computation error " + e.getMessage());
+            reportError(resp, 400, e.getMessage());
+            return;
+        }
+        resp.setStatus(204);
+    }
+
+    private void handleAnalyseWeek(HttpServletRequest req, HttpServletResponse resp) throws IOException {
+        DatastoreAnalyticsAccess db = new DatastoreAnalyticsAccess();
+        String date = req.getParameter("date");
+        try {
+            db.analyseWeek(date);
+        } catch (Exception e) {
+            log.severe("Daily computation error " + e.getMessage());
+            reportError(resp, 400, e.getMessage());
+            return;
+        }
+        resp.setStatus(204);
+    }
+
+    private void handleAnalyseMonth(HttpServletRequest req, HttpServletResponse resp) throws IOException {
+        DatastoreAnalyticsAccess db = new DatastoreAnalyticsAccess();
+        String date = req.getParameter("date");
+        try {
+            db.analyseMonth(date);
+        } catch (Exception e) {
+            log.severe("Daily computation error " + e.getMessage());
+            reportError(resp, 400, e.getMessage());
+            return;
+        }
+        resp.setStatus(204);
     }
 }
