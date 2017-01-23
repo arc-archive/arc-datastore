@@ -97,7 +97,7 @@ public class ObjectifyAnalytics implements AnalyticsDatabase {
     }
 
     @Override
-    public InsertResult recordSession(String applicationId, Integer timeZoneOffset, String recordedDate) {
+    public InsertResult recordSession(String applicationId, Integer timeZoneOffset, Long recordedDate) {
         // Do not accept client timestamp since it can't be reliable
         Date d = new Date();
         Long time = d.getTime();

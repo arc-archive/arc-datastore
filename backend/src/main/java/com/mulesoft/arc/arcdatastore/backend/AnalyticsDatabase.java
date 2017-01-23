@@ -9,6 +9,6 @@ import com.mulesoft.arc.arcdatastore.backend.models.QueryResult;
 
 public interface AnalyticsDatabase {
     public QueryResult queryAnalytics(String fromDate, String toDate);
-    public InsertResult recordSession(String applicationId, Integer timeZoneOffset, String recordedDate);
+    public InsertResult recordSession(String applicationId, Integer timeZoneOffset, Long recordedDate);
     public void generateRandomData();
 }

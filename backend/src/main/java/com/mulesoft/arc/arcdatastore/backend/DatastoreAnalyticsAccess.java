@@ -2,8 +2,10 @@ package com.mulesoft.arc.arcdatastore.backend;
 
 import com.google.appengine.api.datastore.DatastoreService;
 import com.google.appengine.api.datastore.DatastoreServiceFactory;
+import com.google.appengine.api.datastore.EntityNotFoundException;
 import com.google.appengine.api.datastore.FetchOptions;
 import com.google.appengine.api.datastore.Entity;
+import com.google.appengine.api.datastore.KeyFactory;
 import com.google.appengine.api.datastore.PropertyProjection;
 import com.google.appengine.api.datastore.Query;
 import com.google.appengine.api.datastore.Query.Filter;
@@ -12,18 +14,7 @@ import com.google.appengine.api.datastore.Query.FilterPredicate;
 import com.google.appengine.api.datastore.Query.CompositeFilterOperator;
 import com.google.appengine.api.datastore.Query.SortDirection;
 
-import com.google.cloud.datastore.Datastore;
-import com.google.cloud.datastore.DatastoreOptions;
-import com.google.cloud.datastore.DateTime;
 
-import com.google.cloud.datastore.Key;
-import com.google.cloud.datastore.KeyFactory;
-
-import com.google.cloud.datastore.QueryResults;
-import com.google.cloud.datastore.StructuredQuery.CompositeFilter;
-import com.google.cloud.datastore.StructuredQuery.PropertyFilter;
-import com.google.cloud.datastore.StructuredQuery.OrderBy;
-import com.google.cloud.datastore.Transaction;
 import com.mulesoft.arc.arcdatastore.backend.models.InsertResult;
 import com.mulesoft.arc.arcdatastore.backend.models.QueryResult;
 
@@ -33,7 +24,6 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
-import java.util.GregorianCalendar;
 import java.util.List;
 import java.util.Locale;
 import java.util.UUID;
@@ -47,7 +37,7 @@ public class DatastoreAnalyticsAccess implements AnalyticsDatabase {
 
     private final int SESSION_TIMEOUT = 1800000;
 
-    private static final Logger log = Logger.getLogger(AnalyticsServlet.class.getName());
+    private static final Logger log = Logger.getLogger(DatastoreAnalyticsAccess.class.getName());
     DatastoreService datastore = DatastoreServiceFactory.getDatastoreService();
 
 
@@ -106,7 +96,7 @@ public class DatastoreAnalyticsAccess implements AnalyticsDatabase {
     }
 
     @Override
-    public InsertResult recordSession(String applicationId, Integer timeZoneOffset, String recordedDate) {
+    public InsertResult recordSession(String applicationId, Integer timeZoneOffset, Long recordedDate) {
         // Do not accept client timestamp since it can't be reliable
         Date d = new Date();
         Long time = d.getTime();
@@ -198,6 +188,19 @@ public class DatastoreAnalyticsAccess implements AnalyticsDatabase {
         cal.set(Calendar.SECOND, cal.getActualMinimum(Calendar.SECOND));
         cal.set(Calendar.MILLISECOND, cal.getActualMinimum(Calendar.MILLISECOND));
         start = cal.getTime();
+
+        String entryKey = df.format(start);
+
+        // First check if result record exists
+        try {
+            datastore.get(KeyFactory.createKey("DailyAnalytics", entryKey));
+            // No reason to redo the work.
+            log.info("DailyAnalytics task was performed for the day of " + start);
+            return;
+        } catch (EntityNotFoundException e) {
+            // No entry, proceed
+        }
+
         cal.set(Calendar.HOUR_OF_DAY, cal.getActualMaximum(Calendar.HOUR_OF_DAY));
         cal.set(Calendar.MINUTE, cal.getActualMaximum(Calendar.MINUTE));
         cal.set(Calendar.SECOND, cal.getActualMaximum(Calendar.SECOND));
@@ -208,9 +211,7 @@ public class DatastoreAnalyticsAccess implements AnalyticsDatabase {
         log.info("Generating daily report " + logFormat.format(start) + " - " + logFormat.format(end));
 
         QueryResult result = queryAnalytics(start, end);
-
-        String key = df.format(start);
-        Entity info = new Entity("DailyAnalytics", key);
+        Entity info = new Entity("DailyAnalytics", entryKey);
         info.setProperty("sessions", result.sessions);
         info.setProperty("users", result.users);
         datastore.put(info);
@@ -245,6 +246,19 @@ public class DatastoreAnalyticsAccess implements AnalyticsDatabase {
         cal.set(Calendar.SECOND, cal.getActualMinimum(Calendar.SECOND));
         cal.set(Calendar.MILLISECOND, cal.getActualMinimum(Calendar.MILLISECOND));
         start = cal.getTime();
+
+        String entryKey = df.format(start);
+
+        // First check if result record exists
+        try {
+            datastore.get(KeyFactory.createKey("WeeklyAnalytics", entryKey));
+            // No reason to redo the work.
+            log.info("WeeklyAnalytics task was performed for the week of " + start);
+            return;
+        } catch (EntityNotFoundException e) {
+            // No entry, proceed
+        }
+
         cal.add(Calendar.DAY_OF_MONTH, 6);
         cal.set(Calendar.HOUR_OF_DAY, cal.getActualMaximum(Calendar.HOUR_OF_DAY));
         cal.set(Calendar.MINUTE, cal.getActualMaximum(Calendar.MINUTE));
@@ -257,8 +271,7 @@ public class DatastoreAnalyticsAccess implements AnalyticsDatabase {
 
         QueryResult result = queryAnalytics(start, end);
 
-        String key = df.format(start);
-        Entity info = new Entity("WeeklyAnalytics", key);
+        Entity info = new Entity("WeeklyAnalytics", entryKey);
         info.setProperty("sessions", result.sessions);
         info.setProperty("users", result.users);
         datastore.put(info);
@@ -287,6 +300,19 @@ public class DatastoreAnalyticsAccess implements AnalyticsDatabase {
         cal.set(Calendar.SECOND, cal.getActualMinimum(Calendar.SECOND));
         cal.set(Calendar.MILLISECOND, cal.getActualMinimum(Calendar.MILLISECOND));
         start = cal.getTime();
+
+        String entryKey = df.format(start);
+
+        // First check if result record exists
+        try {
+            datastore.get(KeyFactory.createKey("MonthlyAnalytics", entryKey));
+            // No reason to redo the work.
+            log.info("MonthlyAnalytics task was performed for the month of " + start);
+            return;
+        } catch (EntityNotFoundException e) {
+            // No entry, proceed
+        }
+
         cal.add(Calendar.DATE, cal.getActualMaximum(Calendar.DAY_OF_MONTH)-1);
         cal.set(Calendar.HOUR_OF_DAY, cal.getActualMaximum(Calendar.HOUR_OF_DAY));
         cal.set(Calendar.MINUTE, cal.getActualMaximum(Calendar.MINUTE));
@@ -299,8 +325,7 @@ public class DatastoreAnalyticsAccess implements AnalyticsDatabase {
 
         QueryResult result = queryAnalytics(start, end);
 
-        String key = df.format(start);
-        Entity info = new Entity("MonthlyAnalytics", key);
+        Entity info = new Entity("MonthlyAnalytics", entryKey);
         info.setProperty("sessions", result.sessions);
         info.setProperty("users", result.users);
         datastore.put(info);

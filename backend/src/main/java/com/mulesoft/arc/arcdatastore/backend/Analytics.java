@@ -26,7 +26,7 @@ import java.util.List;
 /** An endpoint class we are exposing */
 @Api(
   name = "analytics",
-  version = "v1",
+  version = "v2",
   description = "An API to manage ARC analytics.",
   namespace = @ApiNamespace(
     ownerDomain = "backend.arcdatastore.arc.mulesoft.com",
@@ -35,9 +35,6 @@ import java.util.List;
   )
 )
 public class Analytics {
-
-    // http://localhost:8080/_ah/api/analytics/v1/record/?ai=aaa&t=${now}
-    // https://chromerestclient.appspot.com/_ah/api/analytics/v1/record/?ai=aaa&t=${now}
 
     @ApiMethod(name = "record", httpMethod = ApiMethod.HttpMethod.POST )
     public InsertResult record(@Named("ai") @Nullable String appId, @Named("t") @Nullable Long time) throws Exception {

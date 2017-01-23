@@ -5,7 +5,14 @@ import com.mulesoft.arc.arcdatastore.backend.models.ErrorResponse;
 import com.mulesoft.arc.arcdatastore.backend.models.InsertResult;
 import com.mulesoft.arc.arcdatastore.backend.models.QueryResult;
 
+import org.apache.commons.fileupload.FileItem;
+import org.apache.commons.fileupload.FileUploadException;
+import org.apache.commons.fileupload.disk.DiskFileItemFactory;
+import org.apache.commons.fileupload.servlet.ServletFileUpload;
+
+import java.io.File;
 import java.io.IOException;
+import java.util.List;
 import java.util.logging.Logger;
 
 import javax.servlet.ServletException;
@@ -23,9 +30,6 @@ import javax.servlet.http.HttpServletResponse;
 public class AnalyticsServlet extends HttpServlet {
 
     private static final Logger log = Logger.getLogger(AnalyticsServlet.class.getName());
-    AnalyticsDatabase db;
-    // Session timeout in milliseconds - 30 minutes.
-    private static final int SESSION_TIMEOUT = 1800000; // 30 * 60 * 1000; - 30 minutes
 
     @Override
     public void doGet(HttpServletRequest req, HttpServletResponse resp) throws IOException {
@@ -62,8 +66,6 @@ public class AnalyticsServlet extends HttpServlet {
      * This request require sd (start date) and ed (end date) parameters.
      * As a result it will return an JSON object with number of users and sessions.
      *
-     * @param req
-     * @param resp
      * @throws IOException
      */
     private void handleQuery(HttpServletRequest req, HttpServletResponse resp) throws IOException {
@@ -93,11 +95,20 @@ public class AnalyticsServlet extends HttpServlet {
     /**
      * Record a session.
      *
-     * @param req
-     * @param resp
      * @throws IOException
      */
     private void handleRecord(HttpServletRequest req, HttpServletResponse resp) throws IOException {
+        String apiVersion = req.getHeader("x-api-version");
+        if (apiVersion == null || "1".equals(apiVersion)) {
+            handleRecordV1(req, resp);
+        } else if ("2".equals(apiVersion)) {
+            handleRecordV2(req, resp);
+        } else {
+            reportError(resp, 400, "Unsupported API version");
+        }
+    }
+
+    private void handleRecordV1(HttpServletRequest req, HttpServletResponse resp) throws IOException {
         String appId = req.getParameter("ai");
         if (appId == null) {
             reportError(resp, 400, "'ai' (appId) parameter is missing but it's required");
@@ -136,6 +147,97 @@ public class AnalyticsServlet extends HttpServlet {
         writeSuccess(resp, gson.toJson(result));
     }
 
+    private void handleRecordV2(HttpServletRequest req, HttpServletResponse resp) throws IOException {
+        String[] allowed = { "aid", "t", "tz" };
+
+        String tz = null;
+        String t = null;
+        String anonymousId = null;
+
+
+        boolean isMultipart = ServletFileUpload.isMultipartContent(req);
+        if (!isMultipart) {
+            reportError(resp, 400, "Content type of the request is not allowed. Use multipart/form-data");
+            return;
+        }
+
+        DiskFileItemFactory factory = new DiskFileItemFactory();
+        File repository = new File("~/");
+        factory.setRepository(repository);
+        factory.setSizeThreshold(100 * 1024);
+        ServletFileUpload upload = new ServletFileUpload(factory);
+        try {
+            List<FileItem> items = upload.parseRequest(req);
+            for (FileItem item: items) {
+                if (item.isFormField()) {
+                    String fieldName = item.getFieldName();
+                    int index = java.util.Arrays.binarySearch(allowed, fieldName);
+                    if (index < 0) {
+                        continue;
+                    }
+                    if ("aid".equals(fieldName)) {
+                        anonymousId = item.getString();
+                    } else if ("t".equals(fieldName)) {
+                        t = item.getString();
+                    } else if ("tz".equals(fieldName)) {
+                        tz = item.getString();
+                    }
+                }
+            }
+        } catch (FileUploadException e) {
+            reportError(resp, 400, e.getMessage());
+            return;
+        }
+
+        String message = "";
+        if (anonymousId == null) {
+            message = "The `aid` (anonymousId) parameter is required. ";
+        }
+        if (t == null) {
+            message = message.concat("The `t` (time) parameter is required. ");
+        }
+        if (tz == null) {
+            message = message.concat("The `tz` (timeZoneOffset) parameter is required. ");
+        }
+
+        if (!message.equals("")) {
+            reportError(resp, 400, message);
+            return;
+        }
+
+        Long time = null;
+        Integer timeZoneOffset = null;
+        try {
+            timeZoneOffset = Integer.parseInt(tz);
+        } catch (Exception e) {
+            message = "'tz' (timeZoneOffset) is invalid: " + tz + ". Expecting integer.";
+        }
+        try {
+            time = Long.parseLong(t);
+        } catch (Exception e) {
+            message = "'t' (time) is invalid: " + t + ". Expecting long.";
+        }
+
+        if (!message.equals("")) {
+            reportError(resp, 400, message);
+            return;
+        }
+
+        AnalyticsDatabase db = new DatastoreAnalyticsAccess();
+        InsertResult result;
+        try {
+            result = db.recordSession(anonymousId, timeZoneOffset, time);
+        } catch (Exception e) {
+            reportError(resp, 400, e.getMessage());
+            return;
+        }
+        if (result.continueSession) {
+            writeEmptySuccess(resp, 205);
+        } else {
+            writeEmptySuccess(resp, 204);
+        }
+    }
+
     private void handleRandomData(HttpServletRequest req, HttpServletResponse resp) throws IOException {
         AnalyticsDatabase db = getDatabase(req);
         db.generateRandomData();
@@ -159,15 +261,8 @@ public class AnalyticsServlet extends HttpServlet {
         resp.getWriter().print(response);
     }
 
-    private void dumpContext(HttpServletRequest req) {
-        String pi = req.getPathInfo();
-        String ru = req.getRequestURI();
-        String cp = req.getContextPath();
-        String sn = req.getServerName();
-        System.out.println("Path info " + pi);
-        System.out.println("Request URI " + ru);
-        System.out.println("Context path " + cp);
-        System.out.println("Server name " + sn);
+    private void writeEmptySuccess(HttpServletResponse resp, int status) throws IOException {
+        resp.setStatus(status);
     }
 
     private AnalyticsDatabase getDatabase(HttpServletRequest req) {
@@ -185,6 +280,7 @@ public class AnalyticsServlet extends HttpServlet {
     private void handleAnalyseDay(HttpServletRequest req, HttpServletResponse resp) throws IOException {
         DatastoreAnalyticsAccess db = new DatastoreAnalyticsAccess();
         String date = req.getParameter("date");
+
         try {
             db.analyseDay(date);
         } catch (Exception e) {

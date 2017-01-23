@@ -42,6 +42,26 @@
         <url-pattern>/.well-known/acme-challenge/*</url-pattern>
     </servlet-mapping>
 
+    <servlet>
+        <servlet-name>tasks-api</servlet-name>
+        <servlet-class>com.mulesoft.arc.arcdatastore.backend.TasksServlet</servlet-class>
+    </servlet>
+
+    <servlet-mapping>
+        <servlet-name>tasks-api</servlet-name>
+        <url-pattern>/tasks/*</url-pattern>
+    </servlet-mapping>
+
+    <security-constraint>
+        <web-resource-collection>
+            <web-resource-name>generating-random-data-for-testing</web-resource-name>
+            <url-pattern>/analytics/random</url-pattern>
+        </web-resource-collection>
+        <auth-constraint>
+            <role-name>admin</role-name>
+        </auth-constraint>
+    </security-constraint>
+
     <welcome-file-list>
         <welcome-file>index.html</welcome-file>
     </welcome-file-list>
