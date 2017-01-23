@@ -42,18 +42,20 @@ public class TasksServlet extends HttpServlet {
 
         cal.add(Calendar.DAY_OF_MONTH, -1);
         // Always add daily task.
+        String date = df.format(cal.getTime());
         q.add(TaskOptions.Builder.withUrl("/analytics/analyse-day")
-                .param("date", df.format(cal.getTime()))
-                .taskName("daily-analyser")
+                .param("date", date)
+                .taskName("daily-analyser-" + date)
                 .method(TaskOptions.Method.GET));
 
         log.info("Scheduled daily task.");
         if (todayWeekday == cal.getFirstDayOfWeek()) {
             cal.add(Calendar.DAY_OF_MONTH, -6); // not 7 because 1 day was already subtracted.
             // schedule last week
+            date = df.format(cal.getTime());
             q.add(TaskOptions.Builder.withUrl("/analytics/analyse-week")
-                    .param("date", df.format(cal.getTime()))
-                    .taskName("weekly-analyser")
+                    .param("date", date)
+                    .taskName("weekly-analyser-" + date)
                     .method(TaskOptions.Method.GET));
             cal.add(Calendar.DAY_OF_MONTH, 6);
             log.info("Scheduled weekly task.");
@@ -63,8 +65,9 @@ public class TasksServlet extends HttpServlet {
             cal.add(Calendar.MONTH, -1);
             // schedule last month.
             df = new SimpleDateFormat("yyyy-MM");
+            date = df.format(cal.getTime());
             q.add(TaskOptions.Builder.withUrl("/analytics/analyse-month")
-                    .param("date", df.format(cal.getTime()))
+                    .param("date", date)
                     .taskName("monthly-analyser")
                     .method(TaskOptions.Method.GET));
             log.info("Scheduled monthly task.");
