@@ -1,5 +1,6 @@
 package com.mulesoft.arc.arcdatastore.backend;
 
+import com.google.apphosting.api.DeadlineExceededException;
 import com.google.gson.Gson;
 import com.mulesoft.arc.arcdatastore.backend.models.ErrorResponse;
 import com.mulesoft.arc.arcdatastore.backend.models.InsertResult;
@@ -283,6 +284,11 @@ public class AnalyticsServlet extends HttpServlet {
 
         try {
             db.analyseDay(date);
+        } catch (DeadlineExceededException e) {
+            log.severe("Daily computation timeout");
+            db.cacheCurrentQueryResults();
+            reportError(resp, 400, e.getMessage());
+            return;
         } catch (Exception e) {
             log.severe("Daily computation error " + e.getMessage());
             reportError(resp, 400, e.getMessage());
@@ -296,6 +302,11 @@ public class AnalyticsServlet extends HttpServlet {
         String date = req.getParameter("date");
         try {
             db.analyseWeek(date);
+        } catch (DeadlineExceededException e) {
+            log.severe("Weekly computation timeout");
+            db.cacheCurrentQueryResults();
+            reportError(resp, 400, e.getMessage());
+            return;
         } catch (Exception e) {
             log.severe("Daily computation error " + e.getMessage());
             reportError(resp, 400, e.getMessage());
@@ -309,6 +320,11 @@ public class AnalyticsServlet extends HttpServlet {
         String date = req.getParameter("date");
         try {
             db.analyseMonth(date);
+        } catch (DeadlineExceededException e) {
+            log.severe("Monthly computation timeout");
+            db.cacheCurrentQueryResults();
+            reportError(resp, 400, e.getMessage());
+            return;
         } catch (Exception e) {
             log.severe("Daily computation error " + e.getMessage());
             reportError(resp, 400, e.getMessage());

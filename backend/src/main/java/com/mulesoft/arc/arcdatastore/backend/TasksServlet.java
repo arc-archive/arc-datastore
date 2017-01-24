@@ -11,6 +11,7 @@ import java.text.DateFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
+import java.util.Locale;
 import java.util.logging.Logger;
 
 import javax.servlet.ServletException;
@@ -40,7 +41,7 @@ public class TasksServlet extends HttpServlet {
 
     private void addTasks(HttpServletResponse resp) {
         Calendar cal = Calendar.getInstance();
-        DateFormat df = new SimpleDateFormat("yyyy-MM-dd");
+        DateFormat df = new SimpleDateFormat("yyyy-MM-dd", Locale.UK);
         Queue q = QueueFactory.getQueue("analytics-analyser");
 
         int todayDay = cal.get(Calendar.DAY_OF_MONTH);
@@ -70,7 +71,7 @@ public class TasksServlet extends HttpServlet {
         if (todayDay == 1) {
             cal.add(Calendar.MONTH, -1);
             // schedule last month.
-            df = new SimpleDateFormat("yyyy-MM");
+            df = new SimpleDateFormat("yyyy-MM", Locale.UK);
             date = df.format(cal.getTime());
             q.add(TaskOptions.Builder.withUrl("/analytics/analyse-month")
                     .param("date", date)
@@ -102,11 +103,11 @@ public class TasksServlet extends HttpServlet {
         }
 
         String dateFormat = "YYY-mm";
-        if (!type.equals("monthly")) {
+        if (!"monthly".equals(type)) {
             dateFormat = dateFormat.concat("-dd");
         }
 
-        SimpleDateFormat sdf = new SimpleDateFormat(dateFormat);
+        SimpleDateFormat sdf = new SimpleDateFormat(dateFormat, Locale.UK);
         sdf.setLenient(false);
 
         try {
@@ -116,18 +117,28 @@ public class TasksServlet extends HttpServlet {
             return;
         }
 
+        if (date == null || type == null) {
+            // it's just to make AndroidStudio's linter happy again.
+            return;
+        }
+
         String url = "/analytics/analyse-";
         String taskName;
-        if (type.equals("daily")) {
-            url = url.concat("day");
-            taskName = "daily";
-        } else if (type.equals("weekly")) {
-            url = url.concat("week");
-            taskName = "weekly";
-        } else {
-            url = url.concat("month");
-            taskName = "monthly";
+        switch (type) {
+            case "daily":
+                url = url.concat("day");
+                taskName = "daily";
+                break;
+            case "weekly":
+                url = url.concat("week");
+                taskName = "weekly";
+                break;
+            default:
+                url = url.concat("month");
+                taskName = "monthly";
+                break;
         }
+
         taskName = taskName.concat("-analyser-" + date);
         Queue q = QueueFactory.getQueue("analytics-analyser");
         q.add(TaskOptions.Builder.withUrl(url)

@@ -2,6 +2,6 @@
 <queue-entries>
     <queue>
         <name>analytics-analyser</name>
-        <rate>1/h</rate>
+        <rate>4/h</rate>
     </queue>
 </queue-entries>

@@ -6,7 +6,6 @@ import com.google.appengine.api.datastore.EntityNotFoundException;
 import com.google.appengine.api.datastore.FetchOptions;
 import com.google.appengine.api.datastore.Entity;
 import com.google.appengine.api.datastore.KeyFactory;
-import com.google.appengine.api.datastore.PropertyProjection;
 import com.google.appengine.api.datastore.Query;
 import com.google.appengine.api.datastore.Query.Filter;
 import com.google.appengine.api.datastore.Query.FilterOperator;
@@ -30,16 +29,15 @@ import java.util.UUID;
 import java.util.logging.Logger;
 
 /**
- * Created by jarrod on 23/01/17.
+ * A database access implementation for the analytics data.
+ * It represents low level data access.
  */
 
-public class DatastoreAnalyticsAccess implements AnalyticsDatabase {
-
-    private final int SESSION_TIMEOUT = 1800000;
+class DatastoreAnalyticsAccess implements AnalyticsDatabase {
 
     private static final Logger log = Logger.getLogger(DatastoreAnalyticsAccess.class.getName());
-    DatastoreService datastore = DatastoreServiceFactory.getDatastoreService();
-
+    private DatastoreService datastore = DatastoreServiceFactory.getDatastoreService();
+    AnalyticsQuery aq;
 
     @Override
     public QueryResult queryAnalytics(String fromDate, String toDate) {
@@ -63,36 +61,22 @@ public class DatastoreAnalyticsAccess implements AnalyticsDatabase {
         return queryAnalytics(startDate, endDate);
     }
 
-    public QueryResult queryAnalytics(Date fromDate, Date toDate) {
-        Filter downFilter = new FilterPredicate("date", FilterOperator.GREATER_THAN_OR_EQUAL, fromDate);
-        Filter upFilter = new FilterPredicate("date", FilterOperator.LESS_THAN_OR_EQUAL, toDate);
-        Filter queryFilter = CompositeFilterOperator.and(downFilter, upFilter);
+    private QueryResult queryAnalytics(Date fromDate, Date toDate) throws IllegalArgumentException {
+        aq = new AnalyticsQuery(fromDate, toDate);
+        QueryResult result = aq.query();
+        return result;
+    }
 
-        Query q = new Query("ArcSession")
-                .setFilter(queryFilter)
-                .addProjection(new PropertyProjection("appId", String.class));
-        List<Entity> list = datastore.prepare(q)
-                .asList(FetchOptions.Builder.withDefaults());
-
-        ArrayList<String> uids = new ArrayList<>();
-        long users = 0;
-        long sessions = 0;
-
-        for (Entity item: list) {
-            String appId = (String) item.getProperty("appId");
-            if (!uids.contains(appId)) {
-                uids.add(appId);
-                users++;
-            }
-            sessions++;
+    public void cacheCurrentQueryResults() {
+        if (aq == null) {
+            return;
+        }
+        try {
+            aq.saveCache();
+        } catch (Exception e) {
+            log.warning("Unable write cache: " + e.getMessage());
         }
 
-        QueryResult result = new QueryResult();
-        result.sessions = sessions;
-        result.users = users;
-        result.startDate = fromDate;
-        result.endDate = toDate;
-        return result;
     }
 
     @Override
@@ -124,7 +108,7 @@ public class DatastoreAnalyticsAccess implements AnalyticsDatabase {
 
     @Override
     public void generateRandomData() {
-        int size = 2000;
+        int size = 10000;
         ArrayList<Entity> list = new ArrayList<>(size);
         for (int i = 0; i < size; i++) {
             Date d = getRandomDay();
@@ -138,7 +122,7 @@ public class DatastoreAnalyticsAccess implements AnalyticsDatabase {
     }
 
     private Entity getActiveSession(String applicationId, long recordedTime) {
-        long past = recordedTime - SESSION_TIMEOUT;
+        long past = recordedTime - 1800000;
         Date datePast = new Date(past);
 
         Filter appIdFilter = new FilterPredicate("appId", FilterOperator.EQUAL, applicationId);
@@ -172,7 +156,7 @@ public class DatastoreAnalyticsAccess implements AnalyticsDatabase {
      *
      * @param date A day date as a YYYY-mm-ddd
      */
-    public void analyseDay(String date) throws Exception {
+    void analyseDay(String date) throws Exception {
         Date start;
         Date end;
         Calendar cal = Calendar.getInstance();
@@ -223,7 +207,7 @@ public class DatastoreAnalyticsAccess implements AnalyticsDatabase {
      * @param date A day when the week starts as a YYYY-mm-dd. This function will search for previous
      *             first day of week (if pointed date isn't one)
      */
-    public void analyseWeek(String date) throws Exception {
+    void analyseWeek(String date) throws Exception {
         Date start;
         Date end;
         Calendar cal = Calendar.getInstance();
@@ -282,11 +266,11 @@ public class DatastoreAnalyticsAccess implements AnalyticsDatabase {
      *
      * @param date A data as a YYYY-mm
      */
-    public void analyseMonth(String date) throws Exception {
+    void analyseMonth(String date) throws Exception {
         Date start;
         Date end;
         Calendar cal = Calendar.getInstance();
-        DateFormat df = new SimpleDateFormat("yyyy-MM");
+        DateFormat df = new SimpleDateFormat("yyyy-MM", Locale.UK);
         if (date != null) {
             log.info("Got date to use as a reference: " + date);
             Date d = df.parse(date);
@@ -320,7 +304,7 @@ public class DatastoreAnalyticsAccess implements AnalyticsDatabase {
         cal.set(Calendar.MILLISECOND, cal.getActualMaximum(Calendar.MILLISECOND));
         end = cal.getTime();
 
-        DateFormat logFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+        DateFormat logFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.UK);
         log.info("Generating monthly report " + logFormat.format(start) + " - " + logFormat.format(end));
 
         QueryResult result = queryAnalytics(start, end);
