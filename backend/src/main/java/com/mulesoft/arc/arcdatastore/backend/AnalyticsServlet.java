@@ -35,7 +35,10 @@ public class AnalyticsServlet extends HttpServlet {
     @Override
     public void doGet(HttpServletRequest req, HttpServletResponse resp) throws IOException {
         String path = req.getPathInfo();
-        if ("/query".equals(path)) {
+        if ("/".equals(path)) {
+            resp.sendRedirect("/analytics.html");
+            return;
+        } else if ("/query".equals(path)) {
             handleQuery(req, resp);
         } else if ("/random".equals(path)) {
             handleRandomData(req, resp);

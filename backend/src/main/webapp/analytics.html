@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Advanced Rest Client</title>
+    <style>
+        body {
+            max-width: 700px;
+        }
+    </style>
+</head>
+<body role="document">
+    <h1>The Advanced REST Client analytics service</h1>
+    <p>Hi,</p>
+    <p>If you are here it means that you are wondering what is happening with a data sent from ARC to this endpoint.</p>
+    <p>In short: <b>nothing much</b>.</p>
+    <p>But I'm guessing it's not the information you are looking for. So here's a longer explanation.</p>
+    <p>The app generates application ID that is unique for all application instances. It means that you have ARC installed on more than one machine it generates an ID and stores it <b>locally</b> on your machine. Right now it is not very useful for the app to have this information. Earlier it was used as an identifier dor user's data stored on application backend. However, the backend is not offering data synchronization anymore and the app ID was no longer usable.</p>
+    <p>That being said, the app is collecting usage information in both Google Analytics (more complex tracking mostly for usability research) and using it's own server. The second case collects information how many times the app was opened <b>only</b>. This is quite important information for the author to be sure that amount of time put in app development makes sense - that someone uses this app. But the app do not store your data here. Before sending an identifier to this analytics endpoint it anonymize app ID using hashing key that is generated only for time needed to generate anonymous ID. This means that after anonymized ID is generated there's no way to get back to original string (which is app ID) and to correlate a person or even app instance with the data. Therefore <b>the app is not keeping personal data</b> on the server.</p>
+    <p><b>Full data stored in the analytics database:</b></p>
+    <ul>
+        <li>anonymized app id</li>
+        <li>Session start time</li>
+        <li>Last session ping time</li>
+    </ul>
+    <p>The session is set as new if there's no previous record for the anonymized app id or when last session ping time was over 30 minutes ago. That's it. That's the all information.</p>
+</body>
+</html>
