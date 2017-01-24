@@ -13,6 +13,7 @@ import com.google.appengine.api.memcache.ErrorHandlers;
 import com.google.appengine.api.memcache.Expiration;
 import com.google.appengine.api.memcache.MemcacheService;
 import com.google.appengine.api.memcache.MemcacheServiceFactory;
+import com.google.apphosting.api.ApiProxy;
 import com.mulesoft.arc.arcdatastore.backend.models.QueryResult;
 
 import java.util.ArrayList;
@@ -77,7 +78,16 @@ class AnalyticsQuery {
         log.info("About to query data for " + fromDate.toString() + " - " + toDate.toString());
 
         boolean hasMore;
+        long requiredMililis = 10000; // 10 seconds?
         do {
+            long mls = ApiProxy.getCurrentEnvironment().getRemainingMillis();
+            if (requiredMililis > mls) {
+                // nearly execution timeout.
+                // Generally the DeadlineExceededException handler by the servlet will do the same
+                // But it's better to have more time to handle cache save.
+                saveCache();
+                return null;
+            }
             hasMore = makeQuery();
             log.info("Query returned with flag: " + hasMore);
         } while(hasMore);

@@ -195,6 +195,10 @@ class DatastoreAnalyticsAccess implements AnalyticsDatabase {
         log.info("Generating daily report " + logFormat.format(start) + " - " + logFormat.format(end));
 
         QueryResult result = queryAnalytics(start, end);
+        if (result == null) {
+            // Execution timeout was near, program halted.
+            return;
+        }
         Entity info = new Entity("DailyAnalytics", entryKey);
         info.setProperty("sessions", result.sessions);
         info.setProperty("users", result.users);
@@ -254,7 +258,10 @@ class DatastoreAnalyticsAccess implements AnalyticsDatabase {
         log.info("Generating weekly report " + logFormat.format(start) + " - " + logFormat.format(end));
 
         QueryResult result = queryAnalytics(start, end);
-
+        if (result == null) {
+            // Execution timeout was near, program halted.
+            return;
+        }
         Entity info = new Entity("WeeklyAnalytics", entryKey);
         info.setProperty("sessions", result.sessions);
         info.setProperty("users", result.users);
@@ -308,7 +315,10 @@ class DatastoreAnalyticsAccess implements AnalyticsDatabase {
         log.info("Generating monthly report " + logFormat.format(start) + " - " + logFormat.format(end));
 
         QueryResult result = queryAnalytics(start, end);
-
+        if (result == null) {
+            // Execution timeout was near, program halted.
+            return;
+        }
         Entity info = new Entity("MonthlyAnalytics", entryKey);
         info.setProperty("sessions", result.sessions);
         info.setProperty("users", result.users);

@@ -308,7 +308,7 @@ public class AnalyticsServlet extends HttpServlet {
             reportError(resp, 400, e.getMessage());
             return;
         } catch (Exception e) {
-            log.severe("Daily computation error " + e.getMessage());
+            log.severe("Weekly computation error " + e.getMessage());
             reportError(resp, 400, e.getMessage());
             return;
         }
@@ -326,7 +326,7 @@ public class AnalyticsServlet extends HttpServlet {
             reportError(resp, 400, e.getMessage());
             return;
         } catch (Exception e) {
-            log.severe("Daily computation error " + e.getMessage());
+            log.severe("Monthly computation error " + e.getMessage());
             reportError(resp, 400, e.getMessage());
             return;
         }
