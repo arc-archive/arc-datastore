@@ -1,18 +1,12 @@
 package com.mulesoft.arc.arcdatastore.backend;
 
 import java.io.IOException;
-import java.util.logging.Logger;
 
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-/**
- * Created by jarrod on 08/07/16.
- */
 public class LetsEncrypt extends HttpServlet {
-
-    private static final Logger log = Logger.getLogger(LetsEncrypt.class.getName());
 
     @Override
     public void doGet(HttpServletRequest req, HttpServletResponse resp) throws IOException {

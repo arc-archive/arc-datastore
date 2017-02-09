@@ -1,10 +1,9 @@
 package com.mulesoft.arc.arcdatastore.backend;
 
-import com.google.apphosting.api.DeadlineExceededException;
-import com.google.gson.Gson;
-import com.mulesoft.arc.arcdatastore.backend.models.ErrorResponse;
-import com.mulesoft.arc.arcdatastore.backend.models.InsertResult;
-import com.mulesoft.arc.arcdatastore.backend.models.QueryResult;
+import com.google.appengine.api.NamespaceManager;
+import com.google.appengine.api.datastore.EntityNotFoundException;
+import com.mulesoft.arc.arcdatastore.backend.models.ArcAnalyticsDailyResult;
+import com.mulesoft.arc.arcdatastore.backend.models.ArcAnalyticsRangeResult;
 
 import org.apache.commons.fileupload.FileItem;
 import org.apache.commons.fileupload.FileUploadException;
@@ -15,20 +14,18 @@ import java.io.File;
 import java.io.IOException;
 import java.util.List;
 import java.util.logging.Logger;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import javax.servlet.ServletException;
-import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 /**
- * A servlet to manually create an API for ARC analytics.
- *
- * appsopt.com domain is blocked in China so the backed need custom domain.
- * So far Google failed to run GCE on custom domains.
+ * A servlet to handle analytics data from clients and to query for aggregated data.
  */
 @SuppressWarnings("serial")
-public class AnalyticsServlet extends HttpServlet {
+public class AnalyticsServlet extends BaseServlet {
 
     private static final Logger log = Logger.getLogger(AnalyticsServlet.class.getName());
 
@@ -37,17 +34,16 @@ public class AnalyticsServlet extends HttpServlet {
         String path = req.getPathInfo();
         if ("/".equals(path)) {
             resp.sendRedirect("/analytics.html");
-            return;
-        } else if ("/query".equals(path)) {
-            handleQuery(req, resp);
+        } else if (path != null && path.indexOf("/query") == 0) {
+            handleQuery(path, req, resp);
         } else if ("/random".equals(path)) {
-            handleRandomData(req, resp);
-        } else if ("/analyse-day".equals(path)) {
-            handleAnalyseDay(req, resp);
-        } else if ("/analyse-week".equals(path)) {
-            handleAnalyseWeek(req, resp);
-        } else if ("/analyse-month".equals(path)) {
-            handleAnalyseMonth(req, resp);
+            String namespace = NamespaceManager.get();
+            NamespaceManager.set("analytics");
+            try {
+                handleRandomData(resp);
+            } finally {
+                NamespaceManager.set(namespace);
+            }
         } else {
             reportError(resp, HttpServletResponse.SC_NOT_FOUND, "Unknown path: " + path);
             log.warning("Unknown path for doGET: " + path);
@@ -57,11 +53,17 @@ public class AnalyticsServlet extends HttpServlet {
     @Override
     protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
         String path = req.getPathInfo();
-        if ("/record".equals(path)) {
-            handleRecord(req, resp);
-        } else {
+        if (!"/record".equals(path)) {
             reportError(resp, HttpServletResponse.SC_NOT_FOUND, "Unknown path: " + path);
             log.warning("Unknown path for doPost: " + path);
+        }
+
+        String namespace = NamespaceManager.get();
+        NamespaceManager.set("analytics");
+        try {
+            handleRecord(req, resp);
+        } finally {
+            NamespaceManager.set(namespace);
         }
     }
 
@@ -72,28 +74,100 @@ public class AnalyticsServlet extends HttpServlet {
      *
      * @throws IOException
      */
-    private void handleQuery(HttpServletRequest req, HttpServletResponse resp) throws IOException {
-        String sd = req.getParameter("sd");
-        String ed = req.getParameter("ed");
-        if (sd == null) {
-            reportError(resp, 400, "'sd' (startDate) parameter is required");
-            return;
+    private void handleQuery(String path, HttpServletRequest req, HttpServletResponse resp) throws IOException {
+        String type = null;
+        String scope = null;
+
+        Pattern r = Pattern.compile("^/query/(daily|weekly|monthly)/(users|sessions)$");
+        Matcher m = r.matcher(path);
+        if (m.find()) {
+            type = m.group(1);
+            scope = m.group(2);
         }
-        if (ed == null) {
-            reportError(resp, 400, "'ed' (endDate) parameter is required");
+
+        if (type == null || scope == null) {
+            reportError(resp, HttpServletResponse.SC_NOT_FOUND, "Unknown path: " + path);
+            log.warning("Unknown path for doGET: " + path);
+        }
+
+        String day = req.getParameter("day");
+        if (day == null) {
+            reportError(resp, 400, "The day parameter is required. Set day in yyyy-MM-dd format.");
             return;
         }
 
-        AnalyticsDatabase db = getDatabase(req);
-        QueryResult result;
         try {
-            result = db.queryAnalytics(sd, ed);
-        } catch (Exception e) {
-            reportError(resp, 400, e.getMessage());
+            validateDate(type, day);
+        } catch (IllegalArgumentException e) {
+            reportError(resp, HttpServletResponse.SC_BAD_REQUEST, e.getMessage());
             return;
         }
-        Gson gson = new Gson();
-        writeSuccess(resp, gson.toJson(result));
+
+        String namespace = NamespaceManager.get();
+        NamespaceManager.set("analytics");
+        try {
+            runQuery(type, scope, resp);
+        } finally {
+            NamespaceManager.set(namespace);
+        }
+    }
+
+    private void runQuery(String type, String scope, HttpServletResponse resp) throws IOException {
+        if ("daily".equals(type)) {
+            queryDaily(scope, resp);
+        } else if ("weekly".equals(type)) {
+            queryWeekly(scope, resp);
+        } else {
+            queryMonthly(scope, resp);
+        }
+    }
+
+    private void queryDaily(String scope, HttpServletResponse resp) throws IOException {
+        AnalyticsDatastore db = new AnalyticsDatastore();
+        ArcAnalyticsDailyResult result;
+        try {
+            if ("sessions".equals(scope)) {
+                result = db.getDailySession(startTime);
+            } else {
+                result = db.getDailyUser(startTime);
+            }
+        } catch (EntityNotFoundException e) {
+            reportError(resp, 404, "Not found. " + e.getMessage());
+            return;
+        }
+        writeSuccess(resp, 200, result);
+    }
+
+    private void queryWeekly(String scope, HttpServletResponse resp) throws IOException {
+        AnalyticsDatastore db = new AnalyticsDatastore();
+        ArcAnalyticsRangeResult result;
+        try {
+            if ("sessions".equals(scope)) {
+                result = db.getWeeklySessions(startTime, endTime);
+            } else {
+                result = db.getWeeklyUsers(startTime, endTime);
+            }
+        } catch (EntityNotFoundException e) {
+            reportError(resp, 404, "Not found" + e.getMessage());
+            return;
+        }
+        writeSuccess(resp, 200, result);
+    }
+
+    private void queryMonthly(String scope, HttpServletResponse resp) throws IOException {
+        AnalyticsDatastore db = new AnalyticsDatastore();
+        ArcAnalyticsRangeResult result;
+        try {
+            if ("sessions".equals(scope)) {
+                result = db.getMonthlySessions(startTime, endTime);
+            } else {
+                result = db.getMonthlyUsers(startTime, endTime);
+            }
+        } catch (EntityNotFoundException e) {
+            reportError(resp, 404, "Not found" + e.getMessage());
+            return;
+        }
+        writeSuccess(resp, 200, result);
     }
 
     /**
@@ -103,59 +177,17 @@ public class AnalyticsServlet extends HttpServlet {
      */
     private void handleRecord(HttpServletRequest req, HttpServletResponse resp) throws IOException {
         String apiVersion = req.getHeader("x-api-version");
-        if (apiVersion == null || "1".equals(apiVersion)) {
-            handleRecordV1(req, resp);
-        } else if ("2".equals(apiVersion)) {
+        if ("2".equals(apiVersion)) {
             handleRecordV2(req, resp);
         } else {
             reportError(resp, 400, "Unsupported API version");
         }
     }
 
-    private void handleRecordV1(HttpServletRequest req, HttpServletResponse resp) throws IOException {
-        String appId = req.getParameter("ai");
-        if (appId == null) {
-            reportError(resp, 400, "'ai' (appId) parameter is missing but it's required");
-            return;
-        }
-//        String t = req.getParameter("t");
-//        if (t == null) {
-//            reportError(resp, 400, "'t' (time) parameter is missing but it's required.");
-//            return;
-//        }
-
-        String tz = req.getParameter("tz");
-        if (tz == null) {
-            reportError(resp, 400, "'tz' (timeZoneOffset) parameter is missing but it's required.");
-            return;
-        }
-
-
-        Integer timeZoneOffset;
-        try {
-            timeZoneOffset = Integer.parseInt(tz);
-        } catch (Exception e) {
-            reportError(resp, 400, "'tz' (time) timeZoneOffset is invalid: " + tz);
-            return;
-        }
-
-        AnalyticsDatabase db = getDatabase(req);
-        InsertResult result;
-        try {
-            result = db.recordSession(appId, timeZoneOffset, null);
-        } catch (Exception e) {
-            reportError(resp, 400, e.getMessage());
-            return;
-        }
-        Gson gson = new Gson();
-        writeSuccess(resp, gson.toJson(result));
-    }
-
     private void handleRecordV2(HttpServletRequest req, HttpServletResponse resp) throws IOException {
-        String[] allowed = { "aid", "t", "tz" };
+        String[] allowed = { "aid", "tz" };
 
         String tz = null;
-        String t = null;
         String anonymousId = null;
 
 
@@ -181,8 +213,6 @@ public class AnalyticsServlet extends HttpServlet {
                     }
                     if ("aid".equals(fieldName)) {
                         anonymousId = item.getString();
-                    } else if ("t".equals(fieldName)) {
-                        t = item.getString();
                     } else if ("tz".equals(fieldName)) {
                         tz = item.getString();
                     }
@@ -197,142 +227,47 @@ public class AnalyticsServlet extends HttpServlet {
         if (anonymousId == null) {
             message = "The `aid` (anonymousId) parameter is required. ";
         }
-        if (t == null) {
-            message = message.concat("The `t` (time) parameter is required. ");
-        }
         if (tz == null) {
             message = message.concat("The `tz` (timeZoneOffset) parameter is required. ");
         }
 
-        if (!message.equals("")) {
+        if (!message.equals("") || tz == null) {
             reportError(resp, 400, message);
             return;
         }
 
-        Long time = null;
         Integer timeZoneOffset = null;
         try {
             timeZoneOffset = Integer.parseInt(tz);
         } catch (Exception e) {
             message = "'tz' (timeZoneOffset) is invalid: " + tz + ". Expecting integer.";
         }
-        try {
-            time = Long.parseLong(t);
-        } catch (Exception e) {
-            message = "'t' (time) is invalid: " + t + ". Expecting long.";
-        }
 
         if (!message.equals("")) {
             reportError(resp, 400, message);
             return;
         }
 
-        AnalyticsDatabase db = new DatastoreAnalyticsAccess();
-        InsertResult result;
+        AnalyticsDatastore db = new AnalyticsDatastore();
+        Boolean result;
         try {
-            result = db.recordSession(anonymousId, timeZoneOffset, time);
+            result = db.recordSession(anonymousId, timeZoneOffset);
         } catch (Exception e) {
             reportError(resp, 400, e.getMessage());
             return;
         }
-        if (result.continueSession) {
-            writeEmptySuccess(resp, 205);
-        } else {
+        if (result) {
+            // New session.
             writeEmptySuccess(resp, 204);
+        } else {
+            // Updating existing session.
+            writeEmptySuccess(resp, 205);
         }
     }
 
-    private void handleRandomData(HttpServletRequest req, HttpServletResponse resp) throws IOException {
-        AnalyticsDatabase db = getDatabase(req);
+    private void handleRandomData(HttpServletResponse resp) throws IOException {
+        AnalyticsDatastore db = new AnalyticsDatastore();
         db.generateRandomData();
-        resp.setStatus(204);
-    }
-
-    private void reportError(HttpServletResponse resp, int statusCode, String message) throws IOException {
-        ErrorResponse r = new ErrorResponse();
-        r.code = statusCode;
-        r.message = message;
-
-        Gson gson = new Gson();
-
-        resp.setStatus(statusCode);
-        resp.setContentType("application/json");
-        resp.getWriter().print(gson.toJson(r));
-    }
-
-    private void writeSuccess(HttpServletResponse resp, String response) throws IOException {
-        resp.setContentType("application/json");
-        resp.getWriter().print(response);
-    }
-
-    private void writeEmptySuccess(HttpServletResponse resp, int status) throws IOException {
-        resp.setStatus(status);
-    }
-
-    private AnalyticsDatabase getDatabase(HttpServletRequest req) {
-        if (req == null) {
-            return new ObjectifyAnalytics();
-        }
-        String connection = req.getParameter("connection");
-        if (connection != null && connection.equals("raw")) {
-            return new DatastoreAnalyticsAccess();
-        }
-        return new ObjectifyAnalytics();
-    }
-
-
-    private void handleAnalyseDay(HttpServletRequest req, HttpServletResponse resp) throws IOException {
-        DatastoreAnalyticsAccess db = new DatastoreAnalyticsAccess();
-        String date = req.getParameter("date");
-
-        try {
-            db.analyseDay(date);
-        } catch (DeadlineExceededException e) {
-            log.severe("Daily computation timeout");
-            db.cacheCurrentQueryResults();
-            reportError(resp, 400, e.getMessage());
-            return;
-        } catch (Exception e) {
-            log.severe("Daily computation error " + e.getMessage());
-            reportError(resp, 400, e.getMessage());
-            return;
-        }
-        resp.setStatus(204);
-    }
-
-    private void handleAnalyseWeek(HttpServletRequest req, HttpServletResponse resp) throws IOException {
-        DatastoreAnalyticsAccess db = new DatastoreAnalyticsAccess();
-        String date = req.getParameter("date");
-        try {
-            db.analyseWeek(date);
-        } catch (DeadlineExceededException e) {
-            log.severe("Weekly computation timeout");
-            db.cacheCurrentQueryResults();
-            reportError(resp, 400, e.getMessage());
-            return;
-        } catch (Exception e) {
-            log.severe("Weekly computation error " + e.getMessage());
-            reportError(resp, 400, e.getMessage());
-            return;
-        }
-        resp.setStatus(204);
-    }
-
-    private void handleAnalyseMonth(HttpServletRequest req, HttpServletResponse resp) throws IOException {
-        DatastoreAnalyticsAccess db = new DatastoreAnalyticsAccess();
-        String date = req.getParameter("date");
-        try {
-            db.analyseMonth(date);
-        } catch (DeadlineExceededException e) {
-            log.severe("Monthly computation timeout");
-            db.cacheCurrentQueryResults();
-            reportError(resp, 400, e.getMessage());
-            return;
-        } catch (Exception e) {
-            log.severe("Monthly computation error " + e.getMessage());
-            reportError(resp, 400, e.getMessage());
-            return;
-        }
         resp.setStatus(204);
     }
 }
