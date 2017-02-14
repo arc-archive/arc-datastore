@@ -1,0 +1,33 @@
+indexes:
+  # - kind: Session
+  #   properties:
+  #   - name: day
+
+  - kind: Session
+    properties:
+    - name: appId
+    - name: lastActive
+      direction: desc
+
+  # - kind: User
+  #   properties:
+  #   - name: day
+  #
+  # - kind: DailyUsers
+  #   properties:
+  #   - name: day
+  # - kind: WeeklyUsers
+  #   properties:
+  #   - name: day
+  # - kind: MonthlyUsers
+  #   properties:
+  #   - name: day
+  # - kind: DailySessions
+  #   properties:
+  #   - name: day
+  # - kind: WeeklySessions
+  #   properties:
+  #   - name: day
+  # - kind: MonthlySessions
+  #   properties:
+  #   - name: day

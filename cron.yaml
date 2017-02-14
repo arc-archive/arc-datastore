@@ -1,0 +1,19 @@
+cron:
+- description: Computes daily users
+  url: /tasks/daily/users
+  schedule: every day 12:00
+- description: Computes daily sessions
+  url: /tasks/daily/sessions
+  schedule: every day 12:01
+- description: Computes weekly users
+  url: /tasks/weekly/users
+  schedule: every monday 12:00
+- description: Computes weekly sessions
+  url: /tasks/weekly/sessions
+  schedule: every monday 12:05
+- description: Computes monthly users
+  url: /tasks/monthly/users
+  schedule: 1st day of month 12:00
+- description: Computes monthly sessions
+  url: /tasks/monthly/sessions
+  schedule: 1st day of month 12:10
