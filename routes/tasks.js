@@ -55,7 +55,8 @@ class TasksRoute extends BaseRoute {
     .then(() => {
       res.status(204).end();
     })
-    .catch(() => {
+    .catch((e) => {
+      console.error(e);
       return this.sendError(res, 500, 'Service call error');
     });
   }

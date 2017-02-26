@@ -1,7 +1,7 @@
 {
   "name": "arc-datastore-node",
   "description": "Advanced REST Client datastore source code.",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "private": true,
   "license": "Apache Version 2.0",
   "author": "The ARC authors",
@@ -10,7 +10,8 @@
   },
   "scripts": {
     "start": "node ./bin/www",
-    "test": "cd ../..; npm run t -- appengine/datastore/test/*.test.js"
+    "test": "cd ../..; npm run t -- appengine/datastore/test/*.test.js",
+    "deploy": "gcloud app deploy"
   },
   "dependencies": {
     "@google-cloud/datastore": "0.7.0",

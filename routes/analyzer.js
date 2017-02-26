@@ -38,6 +38,7 @@ class AnalyzerRoute extends BaseRoute {
     try {
       this.validateDate(type, date);
     } catch (e) {
+      console.error(e);
       return this.sendError(res, 400, e.message);
     }
 
@@ -61,6 +62,7 @@ class AnalyzerRoute extends BaseRoute {
         res.status(205).end();
         return;
       }
+      console.error(e);
       this.sendError(res, 400, e.message);
     });
   }

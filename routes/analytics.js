@@ -43,6 +43,7 @@ class AnalyticsRoute extends BaseRoute {
     try {
       this.validateDate(type, date);
     } catch (e) {
+      console.error(e);
       return this.sendError(res, 400, e.message);
     }
 
@@ -67,23 +68,24 @@ class AnalyticsRoute extends BaseRoute {
       }
     })
     .catch((e) => {
+      console.error(e);
       this.sendError(res, 400, e.message);
     });
   }
 
   _onRandom(req, res) {
-    const store = new AnalyticsDatastore();
-    store.generateData()
-    .then((result) => {
-      if (result instanceof Error) {
-        return this.sendError(res, 500, result.message);
-      }
-      res.status(204).end();
-    })
-    .catch((e) => {
-      this.sendError(res, 500, e.message);
-    });
-
+    // const store = new AnalyticsDatastore();
+    // store.generateData()
+    // .then((result) => {
+    //   if (result instanceof Error) {
+    //     return this.sendError(res, 500, result.message);
+    //   }
+    //   res.status(204).end();
+    // })
+    // .catch((e) => {
+    //   this.sendError(res, 500, e.message);
+    // });
+    this.sendError(res, 404, 'Not allowed!');
   }
 
   _onRecord(req, res) {
@@ -118,6 +120,7 @@ class AnalyticsRoute extends BaseRoute {
       }
     })
     .catch((e) => {
+      console.error(e);
       this.sendError(res, 500, e.message);
     });
   }
