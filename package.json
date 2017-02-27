@@ -4,26 +4,45 @@
   "version": "0.0.2",
   "private": true,
   "license": "Apache Version 2.0",
-  "author": "The ARC authors",
+  "author": "Mulesoft Ltd",
+  "contributors": [{
+    "name": "Pawel Psztyc",
+    "email": "pawel.psztyc@mulesoft.com"
+  }],
   "engines": {
     "node": "7.1.0"
   },
   "scripts": {
     "start": "node ./bin/www",
     "test": "cd ../..; npm run t -- appengine/datastore/test/*.test.js",
-    "deploy": "gcloud app deploy"
+    "deploy": "gcloud app deploy app.yaml",
+    "monitor": "nodemon app.js"
+  },
+  "semistandard": {
+    "globals": [
+      "after",
+      "afterEach",
+      "before",
+      "beforeEach",
+      "describe",
+      "it"
+    ]
   },
   "dependencies": {
+    "@google/cloud-debug": "^0.8.3",
+    "@google/cloud-trace": "^0.5.5",
     "@google-cloud/datastore": "0.7.0",
     "body-parser": "1.16.0",
     "cookie-parser": "1.4.3",
     "debug": "2.6.0",
     "express": "4.14.1",
     "express-busboy": "^5.0.0",
+    "express-winston": "^2.0.0",
     "morgan": "1.8.0",
     "node-fetch": "^1.6.3",
     "pug": "2.0.0-beta6",
     "serve-favicon": "2.3.2",
-    "uuid": "^3.0.1"
+    "uuid": "^3.0.1",
+    "winston": "^2.2.0"
   }
 }

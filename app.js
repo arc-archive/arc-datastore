@@ -1,12 +1,20 @@
 'use strict';
 
+// Activate Google Cloud Trace and Debug when in production
+if (process.env.NODE_ENV === 'production') {
+  require('@google/cloud-trace').start();
+  require('@google/cloud-debug');
+}
+
 const express = require('express');
 const path = require('path');
 const logger = require('morgan');
 const bb = require('express-busboy');
+const logging = require('./lib/logging');
 
 const app = express();
 app.enable('trust proxy');
+app.disable('etag');
 
 app.set('view engine', 'pug');
 app.set('views', path.join(__dirname, 'views'));
@@ -21,7 +29,8 @@ app.use('/.well-known/', require('./routes/letsencrypt'));
 app.use('/tasks/', require('./routes/tasks'));
 
 app.set('x-powered-by', false);
-app.set('etag', false);
+
+app.use(logging.requestLogger);
 
 // catch 404 and forward to error handler
 app.use((req, res, next) => {
@@ -45,7 +54,7 @@ if (app.get('env') === 'development') {
 // production error handler
 // no stacktraces leaked to user
 app.use((err, req, res) => {
-  console.log(err);
+  console.error(err);
   res.status(err.status || 500);
   res.render('error', {
     message: err.message,

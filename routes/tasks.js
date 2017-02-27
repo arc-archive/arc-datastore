@@ -3,6 +3,7 @@
 const express = require('express');
 const {BaseRoute} = require('./base-route');
 const fetch = require('node-fetch');
+const logging = require('../lib/logging');
 const router = express.Router();
 
 /**
@@ -38,22 +39,33 @@ class TasksRoute extends BaseRoute {
     const scope = req.params.scope;
 
     if (this.allowedTypes.indexOf(type) === -1 || this.allowedScopes.indexOf(scope) === -1) {
-      return this.sendError(res, 400, 'Unknown path');
+      return this.sendError(res, 404, 'Unknown path');
     }
 
-    var cronTest = req.get(this.cronHeader);
-    if (!cronTest) {
-      return this.sendError(res, 400, 'This endpoint can be called only by the cron call.');
-    }
+    // var cronTest = req.get(this.cronHeader);
+    // if (!cronTest) {
+    //   return this.sendError(res, 400, 'This endpoint can be called only by the cron jon only.');
+    // }
 
     this._callService(type, scope, res);
   }
 
   _callService(type, scope, res) {
     const url = this._getServiceUrl(type, scope);
+    // console.info('Calling service from cron: ', url);
+    logging.info('Calling service from cron: ', url);
     fetch(url)
-    .then(() => {
-      res.status(204).end();
+    .then((response) => {
+      if (!response.ok) {
+        return response.text()
+        .then((text) => {
+          logging.error('Service called with error: ', response.status);
+          logging.error('Service response: ', text);
+          res.status(response.status).end();
+        });
+      }
+      logging.info('Service called with the success: ', response.status);
+      res.status(response.status).end();
     })
     .catch((e) => {
       console.error(e);
@@ -64,6 +76,7 @@ class TasksRoute extends BaseRoute {
   _getServiceUrl(type, scope) {
     var url = 'https://advancedrestclient-1155.appspot.com/analyzer/' + type + '/' + scope;
     var d = new Date();
+    d.setDate(d.getDate() - 1); // subrtact a day
     url += '?date=';
     url += d.getFullYear() + '-';
     var month = d.getMonth();
