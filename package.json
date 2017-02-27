@@ -16,7 +16,7 @@
     "start": "node ./bin/www",
     "test": "cd ../..; npm run t -- appengine/datastore/test/*.test.js",
     "deploy": "gcloud app deploy app.yaml",
-    "monitor": "nodemon app.js"
+    "monitor": "nodemon ./bin/www"
   },
   "semistandard": {
     "globals": [
