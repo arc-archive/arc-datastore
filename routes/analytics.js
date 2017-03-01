@@ -22,6 +22,7 @@ class AnalyticsRoute extends BaseRoute {
 
   initRoute() {
     router.get('/', this._onIndex.bind(this));
+    router.get('/query/custom/:scope', this._onQueryCustom.bind(this));
     router.get('/query/:type/:scope', this._onQuery.bind(this));
     router.get('/random', this._onRandom.bind(this));
     router.post('/record', this._onRecord.bind(this));
@@ -29,6 +30,43 @@ class AnalyticsRoute extends BaseRoute {
 
   _onIndex(req, res) {
     res.redirect('/analytics.html');
+  }
+
+  _onQueryCustom(req, res) {
+    const scope = req.params.scope;
+    if (this.allowedScopes.indexOf(scope) === -1) {
+      return this.sendError(res, 400, 'Unknown path');
+    }
+
+    const start = req.query.start;
+    const end = req.query.end;
+
+    try {
+      const startDate = this.getDatePast(start);
+      const endDate = this.getDatePast(end);
+
+      const store = new AnalyticsDatastore();
+      let fn = 'queryCustomRange';
+      fn += scope[0].toUpperCase();
+      fn += scope.substr(1);
+      console.log(fn);
+      store[fn](startDate.getTime(), endDate.getTime())
+      .then((result) => {
+        if (!result) {
+          // not yet ready
+          this.sendError(res, 404, 'Not yet computed.');
+        } else {
+          this.sendObject(res, result);
+        }
+      })
+      .catch((e) => {
+        console.error(e);
+        this.sendError(res, 400, e.message);
+      });
+    } catch (e) {
+      console.error(e);
+      return this.sendError(res, 400, e.message);
+    }
   }
 
   _onQuery(req, res) {

@@ -114,6 +114,43 @@ class BaseRoute {
     this.startTime = startCalendar.getTime();
     this.endTime = endCalendar.getTime();
   }
+
+  getDatePast(date) {
+    if (!date) {
+      throw new TypeError('Invalid parameter.');
+    }
+
+    var time = Date.parse(date);
+    if (time !== time) {
+      let error = 'The date parameter has invalid format. Accepted format is "YYYY-MM-dd".';
+      throw new TypeError(error);
+    }
+    // Today minimum date to check if start date is in future.
+    var today = new Date();
+    today.setHours(0);
+    today.setMinutes(0);
+    today.setSeconds(0);
+    today.setMilliseconds(0);
+
+    // Start day's minimum
+    var startCalendar = new Date(time);
+
+    const offset = startCalendar.getTimezoneOffset();
+    if (offset !== 0) {
+      time += (offset * 60 * 1000);
+      startCalendar = new Date(time);
+    }
+    startCalendar.setHours(0);
+    startCalendar.setMinutes(0);
+    startCalendar.setSeconds(0);
+    startCalendar.setMilliseconds(0);
+
+    if (today.getTime() <= startCalendar.getTime()) {
+      throw new TypeError('The date parameter must be before today.');
+    }
+
+    return startCalendar;
+  }
 }
 
 module.exports.BaseRoute = BaseRoute;
