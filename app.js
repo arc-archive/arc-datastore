@@ -2,10 +2,11 @@
 
 // Activate Google Cloud Trace and Debug when in production
 if (process.env.NODE_ENV === 'production') {
-  require('@google/cloud-trace').start();
-  require('@google/cloud-debug');
+  require('@google-cloud/trace-agent').start();
+  require('@google-cloud/debug-agent').start();
 }
 
+const errors = require('@google-cloud/error-reporting')();
 const express = require('express');
 const path = require('path');
 const logger = require('morgan');
@@ -54,7 +55,7 @@ if (app.get('env') === 'development') {
 // production error handler
 // no stacktraces leaked to user
 app.use((err, req, res) => {
-  console.error(err);
+  errors.report(err);
   res.status(err.status || 500);
   res.render('error', {
     message: err.message,

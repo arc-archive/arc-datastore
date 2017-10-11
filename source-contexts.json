@@ -1,0 +1,14 @@
+[
+  {
+    "context": {
+      "git": {
+        "revisionId": "bfe53c54131c831bfb031da1d4505bb240cc1b9d", 
+        "url": "git@github.com:advanced-rest-client/arc-datastore.git"
+      }
+    }, 
+    "labels": {
+      "category": "remote_repo", 
+      "remote_name": "origin"
+    }
+  }
+]
