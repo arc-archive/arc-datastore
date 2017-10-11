@@ -8,6 +8,11 @@ indexes:
     - name: appId
     - name: lastActive
       direction: desc
+  - kind: Messages
+    properties:
+    - name: target
+    - name: time
+      direction: desc
 
   # - kind: User
   #   properties:
