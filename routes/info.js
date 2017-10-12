@@ -15,22 +15,28 @@ class InfoRoute extends BaseRoute {
   }
 
   initRoute() {
-    router.options('/', this._onGetOptions.bind(this));
+    router.options('/(.*)', this._onGetOptions.bind(this));
     router.get('/messages/', this._onGetMessages.bind(this));
   }
 
   _onGetOptions(req, res) {
+    this._appendCors(req, res);
+    res.set('Content-Type', 'plain/text');
+    res.status(200).send('GET,HEAD');
+  }
+
+  _appendCors(req, res) {
     var origin = req.get('origin');
     if (origin) {
       if (origin.indexOf('http://127.0.0.1') === 0 || origin.indexOf('http://localhost') === 0) {
-        res.set('Access-Control-Allow-Origin', origin);
+        res.set('access-control-allow-origin', origin);
       }
     }
-    res.set('Content-Type', 'plain/text');
-    res.status(200).send('GET');
+    res.set('allow', 'GET,HEAD');
   }
 
   _onGetMessages(req, res) {
+    this._appendCors(req, res);
     var params;
     try {
       params = this.readParams(req);
