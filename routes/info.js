@@ -15,7 +15,19 @@ class InfoRoute extends BaseRoute {
   }
 
   initRoute() {
-    router.get('/', this._onGetMessages.bind(this));
+    router.options('/', this._onGetOptions.bind(this));
+    router.get('/messages/', this._onGetMessages.bind(this));
+  }
+
+  _onGetOptions(req, res) {
+    var origin = req.get('origin');
+    if (origin) {
+      if (origin.indexOf('http://127.0.0.1') === 0 || origin.indexOf('http://localhost') === 0) {
+        res.set('Access-Control-Allow-Origin', origin);
+      }
+    }
+    res.set('Content-Type', 'plain/text');
+    res.status(200).send('GET');
   }
 
   _onGetMessages(req, res) {
@@ -31,7 +43,6 @@ class InfoRoute extends BaseRoute {
   }
 
   _query(config) {
-    console.log('Making a query for', config);
     var query = datastore.createQuery('ArcInfo', 'Messages')
     .order('time', {
       descending: true
