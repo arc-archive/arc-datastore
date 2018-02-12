@@ -44,6 +44,7 @@ app.use(logging.requestLogger);
 app.use((req, res, next) => {
   const err = new Error('Not Found');
   err.status = 404;
+  console.log(req.url);
   next(err);
 });
 
