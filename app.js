@@ -35,6 +35,7 @@ app.use('/analytics', require('./routes/analytics'));
 app.use('/.well-known/', require('./routes/letsencrypt'));
 app.use('/tasks/', require('./routes/tasks'));
 app.use('/info/', require('./routes/info'));
+app.use('/_ah/', require('./routes/ah'));
 
 app.set('x-powered-by', false);
 
