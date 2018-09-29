@@ -5,7 +5,6 @@ const {BaseRoute} = require('./base-route');
 const router = express.Router();
 
 class InfoRoute extends BaseRoute {
-
   constructor() {
     super();
     this.initRoute();

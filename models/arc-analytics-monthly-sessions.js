@@ -1,5 +1,4 @@
 'use strict';
-
 const {ArcAnalyticsRangeResult} = require('./arc-analytics-range-result');
 
 /**

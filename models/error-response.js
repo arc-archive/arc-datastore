@@ -5,7 +5,8 @@
  */
 class ErrorResponse {
   /**
-   * To construct error response provide a status `code` and the reason `message`.
+   * To construct error response provide a status `code` and
+   * the reason `message`.
    *
    * @param {Number} code Status code associated with this response.
    * @param {String} message A reason message.

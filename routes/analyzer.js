@@ -4,11 +4,9 @@ const express = require('express');
 const {BaseRoute} = require('./base-route');
 const {AnalyzerDatastore} = require('../lib/analytics-datastore');
 const {ComputationRecordExistsError} = require('../errors/analyzer-errors');
-
 const router = express.Router();
 
 class AnalyzerRoute extends BaseRoute {
-
   constructor() {
     super();
     this.initRoute();
@@ -30,7 +28,8 @@ class AnalyzerRoute extends BaseRoute {
     const type = req.params.type;
     const scope = req.params.scope;
 
-    if (this.allowedTypes.indexOf(type) === -1 || this.allowedScopes.indexOf(scope) === -1) {
+    if (this.allowedTypes.indexOf(type) === -1 ||
+      this.allowedScopes.indexOf(scope) === -1) {
       return this.sendError(res, 400, 'Unknown path');
     }
 
@@ -47,7 +46,7 @@ class AnalyzerRoute extends BaseRoute {
 
   runService(res, type, scope) {
     const store = new AnalyzerDatastore();
-    var fn = 'analyse';
+    let fn = 'analyse';
     fn += type[0].toUpperCase();
     fn += type.substr(1);
     fn += scope[0].toUpperCase();

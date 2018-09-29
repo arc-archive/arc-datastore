@@ -2,10 +2,10 @@
 
 /**
  * This object is returned in weekly and monthly analytics data.
- * It is a representation of number of users or sessions for each day for the given time period.
+ * It is a representation of number of users or sessions for each day
+ * for the given time period.
  */
 class ArcAnalyticsDailyItemResult {
-
   constructor(day, value) {
     /**
      * A date for the value. Represented as yyyy-MM-dd
@@ -22,8 +22,8 @@ class ArcAnalyticsDailyItemResult {
   }
 
   sort(a, b) {
-    var thisDate = Date.parse(a.day);
-    var otherDate = Date.parse(b.day);
+    const thisDate = Date.parse(a.day);
+    const otherDate = Date.parse(b.day);
     if (!thisDate && !otherDate) {
       return 0;
     }

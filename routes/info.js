@@ -6,9 +6,9 @@ const {ArcInfoMessagesResponse} = require('../models/arc-info-resopnse-model');
 const Datastore = require('@google-cloud/datastore');
 const datastore = Datastore();
 const router = express.Router();
+const oauth2 = require('../lib/oauth2');
 
 class InfoRoute extends BaseRoute {
-
   constructor() {
     super();
     this.initRoute();
@@ -17,6 +17,7 @@ class InfoRoute extends BaseRoute {
   initRoute() {
     router.options('/(.*)', this._onGetOptions.bind(this));
     router.get('/messages/', this._onGetMessages.bind(this));
+    router.post('/messages', oauth2.required, this._onPostMessages.bind(this));
   }
 
   _onGetOptions(req, res) {
@@ -26,7 +27,7 @@ class InfoRoute extends BaseRoute {
   }
 
   _appendCors(req, res) {
-    var origin = req.get('origin');
+    const origin = req.get('origin');
     if (origin) {
       if (origin.indexOf('http://127.0.0.1') === 0 || origin.indexOf('http://localhost') === 0) {
         res.set('access-control-allow-origin', origin);
@@ -37,19 +38,19 @@ class InfoRoute extends BaseRoute {
 
   _onGetMessages(req, res) {
     this._appendCors(req, res);
-    var params;
+    let params;
     try {
       params = this.readParams(req);
     } catch (e) {
       return this.sendError(res, 400, e.message);
     }
     this._query(params)
-    .then(response => this.sendObject(res, response))
-    .catch(cause => this.sendError(res, 500, cause.message));
+    .then((response) => this.sendObject(res, response))
+    .catch((cause) => this.sendError(res, 500, cause.message));
   }
 
   _query(config) {
-    var query = datastore.createQuery('ArcInfo', 'Messages')
+    let query = datastore.createQuery('ArcInfo', 'Messages')
     .order('time', {
       descending: true
     });
@@ -62,11 +63,15 @@ class InfoRoute extends BaseRoute {
     if (config.target) {
       query = query.filter('target', '=', config.target);
     }
+    if (config.channel) {
+      query = query.filter('channel', '=', config.channel);
+    }
     return datastore.runQuery(query)
     .then((results) => {
       const entities = results[0];
       const info = results[1];
-      const response = new ArcInfoMessagesResponse(entities);
+      const response = new ArcInfoMessagesResponse(entities,
+        config.since, config.until);
       if (info.moreResults !== Datastore.NO_MORE_RESULTS) {
         response.cursor = info.endCursor;
       }
@@ -78,19 +83,20 @@ class InfoRoute extends BaseRoute {
    * Reads `since` and `until` properties from the request or creates default
    * ones (last 30 days time period).
    *
+   * @param {Object} req
    * @return {Object} Query configuration object. If cursor has been detected it
    * only returns cusor value (under `cursor` property). Otherwise it returns
    * `since` and `until` properties.
    */
   readParams(req) {
-    var cursor = req.query.cursor;
+    const cursor = req.query.cursor;
     if (cursor) {
       return {
         cursor: cursor
       };
     }
-    var since = req.query.since;
-    var until = req.query.until;
+    let since = req.query.since;
+    let until = req.query.until;
     if (!until || until === 'now') {
       until = Date.now();
     } else {
@@ -112,17 +118,29 @@ class InfoRoute extends BaseRoute {
       throw new Error('"since" cannot be higher than until');
     }
 
-    var result = {
+    const result = {
       since: since,
       until: until
     };
 
-    var platform = req.query.platform;
+    const platform = req.query.platform;
     if (platform && ['chrome', 'electron'].indexOf(platform) !== -1) {
       result.target = platform;
     }
 
+    const channel = req.query.channel;
+    if (channel && ['stable', 'beta', 'dev'].indexOf(channel) !== -1) {
+      result.channel = channel;
+    }
     return result;
+  }
+
+  _onPostMessages(req, res) {
+    if (!oauth2.isAdminUser(req.user.id)) {
+      this.sendError(res, 401, 'Not allowed by this user.');
+      return;
+    }
+    this.sendError(res, 500, 'Not implemented.');
   }
 }
 

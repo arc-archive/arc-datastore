@@ -1,6 +1,6 @@
 'use strict';
-
-const {ArcAnalyticsCustomRangeResult} = require('./arc-analytics-custom-range-result');
+const {ArcAnalyticsCustomRangeResult} = require(
+  './arc-analytics-custom-range-result');
 
 /**
  * A class representing monthly Sessions type.
@@ -16,4 +16,5 @@ class ArcAnalyticsCustomRangeSessions extends ArcAnalyticsCustomRangeResult {
   }
 }
 
-module.exports.ArcAnalyticsCustomRangeSessions = ArcAnalyticsCustomRangeSessions;
+module.exports.ArcAnalyticsCustomRangeSessions =
+  ArcAnalyticsCustomRangeSessions;

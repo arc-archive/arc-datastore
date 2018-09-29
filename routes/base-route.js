@@ -2,7 +2,6 @@
 const {ErrorResponse} = require('../models/error-response');
 
 class BaseRoute {
-
   /**
    * Sends an error response to the client.
    *
@@ -33,11 +32,14 @@ class BaseRoute {
    * Validates date format and range for the given type.
    *
    * Daily type needs to be a date in the past (before today).
-   * Weekly type needs to be date + 7 days in the past. Also it will adjust date to last Monday
+   * Weekly type needs to be date + 7 days in the past. Also it will adjust
+   * date to last Monday
    * (first day of week) if the date is not pointing to Monday.
-   * Monthly have to be date adjusted to first day of month + last day of month in the past.
+   * Monthly have to be date adjusted to first day of month + last day of month
+   * in the past.
    *
-   * This function will set `startTime` and `endTime` fields of this class if successful.
+   * This function will set `startTime` and `endTime` fields of this class
+   * if successful.
    *
    * @param {String} type Either daily, weekly or monthly.
    * @param {String} date The query start date
@@ -51,20 +53,21 @@ class BaseRoute {
       throw new TypeError('The date parameter is required for this method.');
     }
 
-    var time = Date.parse(date);
+    let time = Date.parse(date);
     if (time !== time) {
-      let error = 'The date parameter has invalid format. Accepted format is "YYYY-MM-dd".';
+      let error = 'The date parameter has invalid format. ';
+      error = 'Accepted format is "YYYY-MM-dd".';
       throw new TypeError(error);
     }
     // Today minimum date to check if start date is in future.
-    var today = new Date();
+    const today = new Date();
     today.setHours(0);
     today.setMinutes(0);
     today.setSeconds(0);
     today.setMilliseconds(0);
 
     // Start day's minimum
-    var startCalendar = new Date(time);
+    let startCalendar = new Date(time);
 
     const offset = startCalendar.getTimezoneOffset();
     if (offset !== 0) {
@@ -80,7 +83,7 @@ class BaseRoute {
       throw new TypeError('The date parameter must be before today.');
     }
 
-    var endCalendar;
+    let endCalendar;
     if (type === 'daily') {
       endCalendar = new Date(startCalendar.getTime());
     } else if (type === 'weekly') {
@@ -88,20 +91,24 @@ class BaseRoute {
       let day = startCalendar.getDay();
       let firstDayOfWeek = 1;
       while (day !== firstDayOfWeek) {
-        startCalendar.setTime(startCalendar.getTime() - 86400000); // subtract day
+        // subtract day
+        startCalendar.setTime(startCalendar.getTime() - 86400000);
         day = startCalendar.getDay();
       }
       endCalendar = new Date(startCalendar.getTime());
-      endCalendar.setTime(endCalendar.getTime() + 518400000); //6 * 86400000 - add 6 days
+      // 6 * 86400000 - add 6 days
+      endCalendar.setTime(endCalendar.getTime() + 518400000);
     } else if (type === 'monthly') {
       startCalendar.setDate(1); // first day of month
       endCalendar = new Date(startCalendar.getTime());
       endCalendar.setMonth(endCalendar.getMonth() + 1);
-      endCalendar.setTime(endCalendar.getTime() - 86400000); //day earlier is the last day of month.
+      // day earlier is the last day of month.
+      endCalendar.setTime(endCalendar.getTime() - 86400000);
     }
 
     endCalendar.setDate(endCalendar.getDate() + 1); // midnight next day
-    // substract one millisecond to have last millisecond of the last daty of date range
+    // substract one millisecond to have last millisecond of
+    // the last daty of date range
     endCalendar.setMilliseconds(-1);
     if (today.getTime() <= endCalendar.getTime()) {
       let message = 'The date end range must be before today. Date range ends ';
@@ -120,21 +127,21 @@ class BaseRoute {
       throw new TypeError('Invalid parameter.');
     }
 
-    var time = Date.parse(date);
+    let time = Date.parse(date);
     if (time !== time) {
-      let error = 'The date parameter has invalid format. Accepted format is "YYYY-MM-dd".';
+      let error = 'The date parameter has invalid format. ';
+      error = 'Accepted format is "YYYY-MM-dd".';
       throw new TypeError(error);
     }
     // Today minimum date to check if start date is in future.
-    var today = new Date();
+    const today = new Date();
     today.setHours(0);
     today.setMinutes(0);
     today.setSeconds(0);
     today.setMilliseconds(0);
 
     // Start day's minimum
-    var startCalendar = new Date(time);
-
+    let startCalendar = new Date(time);
     const offset = startCalendar.getTimezoneOffset();
     if (offset !== 0) {
       time += (offset * 60 * 1000);

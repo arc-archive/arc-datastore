@@ -3,7 +3,6 @@
 const express = require('express');
 const {BaseRoute} = require('./base-route');
 const {AnalyticsDatastore} = require('../lib/analytics-datastore');
-
 const router = express.Router();
 
 class AnalyticsRoute extends BaseRoute {
@@ -73,7 +72,8 @@ class AnalyticsRoute extends BaseRoute {
     const type = req.params.type;
     const scope = req.params.scope;
 
-    if (this.allowedTypes.indexOf(type) === -1 || this.allowedScopes.indexOf(scope) === -1) {
+    if (this.allowedTypes.indexOf(type) === -1 ||
+      this.allowedScopes.indexOf(scope) === -1) {
       return this.sendError(res, 400, 'Unknown path');
     }
 
@@ -89,7 +89,7 @@ class AnalyticsRoute extends BaseRoute {
   }
 
   _runQueryService(res, type, scope) {
-    var fn = 'query';
+    let fn = 'query';
     fn += type[0].toUpperCase();
     fn += type.substr(1);
     fn += scope[0].toUpperCase();
@@ -130,7 +130,7 @@ class AnalyticsRoute extends BaseRoute {
     const tz = req.body.tz;
     const anonymousId = req.body.aid;
 
-    var message = '';
+    let message = '';
     if (!anonymousId) {
       message += 'The `aid` (anonymousId) parameter is required. ';
     }

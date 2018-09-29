@@ -2,7 +2,7 @@
 
 const express = require('express');
 const {BaseRoute} = require('./base-route');
-const fetch = require('node-fetch');
+const _fetch = require('node-fetch');
 const logging = require('../lib/logging');
 const router = express.Router();
 
@@ -12,7 +12,6 @@ const router = express.Router();
  *
  */
 class TasksRoute extends BaseRoute {
-
   get cronHeader() {
     return 'X-Appengine-Cron';
   }
@@ -37,16 +36,10 @@ class TasksRoute extends BaseRoute {
   _onTaskCalled(req, res) {
     const type = req.params.type;
     const scope = req.params.scope;
-
-    if (this.allowedTypes.indexOf(type) === -1 || this.allowedScopes.indexOf(scope) === -1) {
+    if (this.allowedTypes.indexOf(type) === -1 ||
+      this.allowedScopes.indexOf(scope) === -1) {
       return this.sendError(res, 404, 'Unknown path');
     }
-
-    // var cronTest = req.get(this.cronHeader);
-    // if (!cronTest) {
-    //   return this.sendError(res, 400, 'This endpoint can be called only by the cron jon only.');
-    // }
-
     this._callService(type, scope, res);
   }
 
@@ -54,7 +47,7 @@ class TasksRoute extends BaseRoute {
     const url = this._getServiceUrl(type, scope);
     // console.info('Calling service from cron: ', url);
     logging.info('Calling service from cron: ', url);
-    fetch(url)
+    _fetch(url)
     .then((response) => {
       if (!response.ok) {
         return response.text()
@@ -74,18 +67,18 @@ class TasksRoute extends BaseRoute {
   }
 
   _getServiceUrl(type, scope) {
-    var url = 'https://advancedrestclient-1155.appspot.com/analyzer/' + type + '/' + scope;
-    var d = new Date();
+    let url = 'https://advancedrestclient-1155.appspot.com/analyzer/' + type + '/' + scope;
+    const d = new Date();
     d.setDate(d.getDate() - 1); // subrtact a day
     url += '?date=';
     url += d.getFullYear() + '-';
-    var month = d.getMonth();
+    let month = d.getMonth();
     month++;
     if (month < 10) {
       month = '0' + month;
     }
     url += month + '-';
-    var day = d.getDate();
+    let day = d.getDate();
     if (day < 10) {
       day = '0' + day;
     }

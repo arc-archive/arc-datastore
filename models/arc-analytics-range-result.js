@@ -1,5 +1,4 @@
 'use strict';
-
 /**
  * A class representing result for daily data query.
  *
@@ -15,11 +14,11 @@ class ArcAnalyticsRangeResult {
      */
     this.kind = kind || 'ArcAnalytics#UnknownRangeResult';
     /**
-     * The first day (Monday) for given time period if the query was related to weekly data or
-     * first day of month if to monthly data.
+     * The first day (Monday) for given time period if the query was
+     * related to weekly data or first day of month if to monthly data.
      *
-     * It may be different than the `day` query parameter if the `day` is not the Monday or the
-     * first day of month.
+     * It may be different than the `day` query parameter if the `day` is
+     * not the Monday or the first day of month.
      *
      * @type {String}
      */

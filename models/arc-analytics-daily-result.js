@@ -6,7 +6,6 @@
  * This class should be extended by class that returns specific results.
  */
 class ArcAnalyticsDailyResult {
-
   constructor(kind, result) {
     /**
      * The default kind value. Should be overwritten by extending class.

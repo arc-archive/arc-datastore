@@ -1,7 +1,5 @@
 'use strict';
-
 const {ArcAnalyticsRangeResult} = require('./arc-analytics-range-result');
-
 /**
  * A class representing weekly Sessions type.
  */

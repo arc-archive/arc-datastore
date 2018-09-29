@@ -13,6 +13,7 @@ indexes:
     - name: target
     - name: time
       direction: desc
+    - name: channel
 
   # - kind: User
   #   properties:

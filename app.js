@@ -4,20 +4,19 @@
 if (process.env.NODE_ENV === 'production') {
   require('@google-cloud/trace-agent').start();
   require('@google-cloud/debug-agent').start({
-    allowExpressions: true,
-    capture: {
-      maxFrames: 20,
-      maxProperties: 100
-    }
+    allowExpressions: true
   });
 }
 
-const errors = require('@google-cloud/error-reporting')();
-const express = require('express');
+const {ErrorReporting} = require('@google-cloud/error-reporting');
 const path = require('path');
 const logger = require('morgan');
-const bb = require('express-busboy');
 const logging = require('./lib/logging');
+const express = require('express');
+const bb = require('express-busboy');
+const session = require('express-session');
+const passport = require('passport');
+const config = require('./config');
 
 const app = express();
 app.enable('trust proxy');
@@ -29,6 +28,21 @@ app.set('views', path.join(__dirname, 'views'));
 app.use(logger('dev'));
 bb.extend(app); // For multipart queries.
 app.use(express.static(path.join(__dirname, 'public')));
+
+// https://github.com/GoogleCloudPlatform/nodejs-getting-started/blob/master/4-auth/app.js
+// Configure the session and session storage.
+const sessionConfig = {
+  resave: false,
+  saveUninitialized: false,
+  secret: config.get('SECRET'),
+  signed: true
+};
+app.use(session(sessionConfig));
+
+// OAuth2
+app.use(passport.initialize());
+app.use(passport.session());
+app.use(require('./lib/oauth2').router);
 
 app.use('/analyzer', require('./routes/analyzer'));
 app.use('/analytics', require('./routes/analytics'));
@@ -45,7 +59,6 @@ app.use(logging.requestLogger);
 app.use((req, res, next) => {
   const err = new Error('Not Found');
   err.status = 404;
-  console.log(req.url);
   next(err);
 });
 
@@ -64,6 +77,7 @@ if (app.get('env') === 'development') {
 // production error handler
 // no stacktraces leaked to user
 app.use((err, req, res) => {
+  const errors = new ErrorReporting();
   errors.report(err);
   res.status(err.status || 500);
   res.render('error', {
