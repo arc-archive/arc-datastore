@@ -2,16 +2,21 @@
 
 const express = require('express');
 const {BaseRoute} = require('./base-route');
-const {ArcInfoMessagesResponse} = require('../models/arc-info-resopnse-model');
-const Datastore = require('@google-cloud/datastore');
-const datastore = Datastore();
 const router = express.Router();
 const oauth2 = require('../lib/oauth2');
+const {MessagesDatastore} = require('../lib/messages-datastore');
 
 class InfoRoute extends BaseRoute {
   constructor() {
     super();
     this.initRoute();
+  }
+
+  get store() {
+    if (!this.__store) {
+      this.__store = new MessagesDatastore();
+    }
+    return this.__store;
   }
 
   initRoute() {
@@ -44,41 +49,13 @@ class InfoRoute extends BaseRoute {
     } catch (e) {
       return this.sendError(res, 400, e.message);
     }
-    this._query(params)
+    this.store.query(params)
     .then((response) => this.sendObject(res, response))
-    .catch((cause) => this.sendError(res, 500, cause.message));
-  }
-
-  _query(config) {
-    let query = datastore.createQuery('ArcInfo', 'Messages')
-    .order('time', {
-      descending: true
-    });
-    if (config.cursor) {
-      query = query.start(config.cursor);
-    } else {
-      query = query.filter('time', '<=', config.until)
-        .filter('time', '>=', config.since);
-    }
-    if (config.target) {
-      query = query.filter('target', '=', config.target);
-    }
-    if (config.channel) {
-      query = query.filter('channel', '=', config.channel);
-    }
-    return datastore.runQuery(query)
-    .then((results) => {
-      const entities = results[0];
-      const info = results[1];
-      const response = new ArcInfoMessagesResponse(entities,
-        config.since, config.until);
-      if (info.moreResults !== Datastore.NO_MORE_RESULTS) {
-        response.cursor = info.endCursor;
-      }
-      return response;
+    .catch((cause) => {
+      console.error(cause);
+      this.sendError(res, 500, cause.message);
     });
   }
-
   /**
    * Reads `since` and `until` properties from the request or creates default
    * ones (last 30 days time period).
@@ -140,7 +117,39 @@ class InfoRoute extends BaseRoute {
       this.sendError(res, 401, 'Not allowed by this user.');
       return;
     }
-    this.sendError(res, 500, 'Not implemented.');
+    const b = req.body;
+    const missing = [];
+    const entry = {};
+
+    ['abstract', 'actionurl', 'cta', 'target', 'title', 'channel']
+    .forEach((prop) => {
+      if (!b[prop]) {
+        missing[missing.length] = prop;
+      } else {
+        entry[prop] = b[prop];
+      }
+    });
+    if (missing.length) {
+      this.sendError(res, 400, missing.join(', ') + ' is required');
+      return;
+    }
+    if (b.time) {
+      if (isNaN(b.time)) {
+        this.sendError(res, 400, 'time is not a number');
+        return;
+      }
+      entry.time = Number(b.time);
+    } else {
+      entry.time = Date.now();
+    }
+
+    this.store.insert(entry)
+    .then(() => {
+      this.sendObject(res, {message: 'Messagee created'});
+    })
+    .catch((cause) => {
+      this.sendError(res, 500, cause.message);
+    });
   }
 }
 
