@@ -133,6 +133,9 @@ class InfoRoute extends BaseRoute {
       this.sendError(res, 400, missing.join(', ') + ' is required');
       return;
     }
+    if (!(entry.target instanceof Array)) {
+      entry.target = [entry.target];
+    }
     if (b.time) {
       if (isNaN(b.time)) {
         this.sendError(res, 400, 'time is not a number');
