@@ -16,7 +16,7 @@
   },
   "scripts": {
     "start": "node ./bin/www",
-    "test": "cd ../..; npm run t -- appengine/datastore/test/*.test.js",
+    "test": "mocha tests/**/*.test.js",
     "deploy": "gcloud app deploy app.yaml",
     "monitor": "nodemon ./bin/www"
   },
@@ -51,5 +51,9 @@
     "serve-favicon": "^2.5.0",
     "uuid": "^3.3.2",
     "winston": "^2.4.4"
+  },
+  "devDependencies": {
+    "chai": "^4.2.0",
+    "mocha": "^4.1.0"
   }
 }
