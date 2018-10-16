@@ -67,22 +67,27 @@ class TasksRoute extends BaseRoute {
   }
 
   _getServiceUrl(type, scope) {
-    let url = 'https://advancedrestclient-1155.appspot.com/analyzer/' + type + '/' + scope;
+    let url;
+    if (process.env.NODE_ENV === 'production') {
+      url = 'https://advancedrestclient-1155.appspot.com/analyzer/';
+    } else {
+      url = 'http://localhost:8080/analyzer/';
+    }
+    url += type + '/' + scope;
     const d = new Date();
-    d.setDate(d.getDate() - 1); // subrtact a day
     url += '?date=';
-    url += d.getFullYear() + '-';
-    let month = d.getMonth();
-    month++;
-    if (month < 10) {
-      month = '0' + month;
+    switch (type) {
+      case 'daily':
+        d.setDate(d.getDate() - 1);
+        break;
+      case 'weekly':
+        d.setDate(d.getDate() - 7);
+        break;
+      case 'monthly':
+        d.setMonth(d.getMonth() - 1);
+        break;
     }
-    url += month + '-';
-    let day = d.getDate();
-    if (day < 10) {
-      day = '0' + day;
-    }
-    url += day;
+    url += d.toISOString().split('T')[0];
     return url;
   }
 }
@@ -90,3 +95,4 @@ class TasksRoute extends BaseRoute {
 new TasksRoute();
 
 module.exports = router;
+module.exports.TasksRoute = TasksRoute;
