@@ -1,5 +1,5 @@
 const assert = require('chai').assert;
-const {InfoRoute} = require('../../../routes/info');
+const {InfoRoute} = require('../../routes/info');
 
 describe('Create message', function() {
   describe('_readQueryParams()', function() {

@@ -16,7 +16,8 @@
   },
   "scripts": {
     "start": "node ./bin/www",
-    "test": "nyc mocha tests/**/*.test.js",
+    "test": "mocha tests/**/*.test.js",
+    "coverage": "nyc mocha tests/**/*.test.js",
     "deploy": "gcloud app deploy app.yaml",
     "monitor": "nodemon ./bin/www"
   },

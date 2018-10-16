@@ -8,3 +8,4 @@ dist
 config.json
 config-dev.json
 config-prod.json
+.nyc_output

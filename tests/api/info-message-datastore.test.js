@@ -1,5 +1,5 @@
 const assert = require('chai').assert;
-const {MessagesDatastore} = require('../../../lib/messages-datastore');
+const {MessagesDatastore} = require('../../lib/messages-datastore');
 
 describe('Messages datastore', function() {
   describe('autoKey()', function() {
