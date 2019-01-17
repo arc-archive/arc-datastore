@@ -1,8 +1,5 @@
 indexes:
-  # - kind: Session
-  #   properties:
-  #   - name: day
-
+# arc datastore API.
   - kind: Session
     properties:
     - name: appId
@@ -14,26 +11,9 @@ indexes:
     - name: time
       direction: desc
     - name: channel
-
-  # - kind: User
-  #   properties:
-  #   - name: day
-  #
-  # - kind: DailyUsers
-  #   properties:
-  #   - name: day
-  # - kind: WeeklyUsers
-  #   properties:
-  #   - name: day
-  # - kind: MonthlyUsers
-  #   properties:
-  #   - name: day
-  # - kind: DailySessions
-  #   properties:
-  #   - name: day
-  # - kind: WeeklySessions
-  #   properties:
-  #   - name: day
-  # - kind: MonthlySessions
-  #   properties:
-  #   - name: day
+# API components CI application
+  - kind: Jwt
+    ancestor: yes
+    properties:
+    - name: created
+      direction: desc
