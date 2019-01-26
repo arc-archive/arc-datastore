@@ -10,6 +10,11 @@ indexes:
     - name: target
     - name: time
       direction: desc
+  - kind: Messages
+    properties:
+    - name: target
+    - name: time
+      direction: desc
     - name: channel
 # API components CI application
   - kind: Jwt

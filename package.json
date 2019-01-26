@@ -19,7 +19,8 @@
     "test": "mocha tests/**/*.test.js",
     "coverage": "nyc mocha tests/**/*.test.js",
     "deploy": "gcloud app deploy app.yaml",
-    "monitor": "nodemon ./bin/www"
+    "monitor": "nodemon ./bin/www",
+    "index": "gcloud datastore indexes create index.yaml"
   },
   "semistandard": {
     "globals": [
